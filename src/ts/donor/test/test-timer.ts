@@ -10,7 +10,6 @@ import * as TestInput from "./test-input";
 import * as Monkey from "./monkey";
 import * as Numbers from "@monkeytype/util/numbers";
 import {
-  showNoticeNotification,
   showErrorNotification,
 } from "../stores/notifications";
 import * as Caret from "./caret";
@@ -267,12 +266,8 @@ function checkIfTimerIsSlow(drift: number): void {
     if (drift > 500 || slowTimerCount > 5) {
       //slow timer
 
-      showNoticeNotification(
-        'This could be caused by "efficiency mode" on Microsoft Edge.',
-      );
-
       showErrorNotification(
-        "Stopping the test due to bad performance. This would cause test calculations to be incorrect. If this happens a lot, please report this.",
+        "Stopping the test due to bad performance. This would cause test calculations to be incorrect.",
       );
 
       TimerEvent.dispatch("fail", "slow timer");
