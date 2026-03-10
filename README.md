@@ -4,11 +4,13 @@ A native desktop typing test app built with [Tauri 2](https://tauri.app), based 
 
 Fully local — no account, no server, no tracking.
 
+⭐ **Please leave a star if you like the app!**
+
 ## Download (macOS)
 
 | File | Description |
 |------|------------|
-| [Monkeytype_0.1.0_aarch64.dmg](https://github.com/sanjaybaskaran/monkeytype-desktop/releases/latest/download/Monkeytype_0.1.0_aarch64.dmg) | macOS Apple Silicon |
+| [Monkeytype_0.1.0_aarch64.dmg](https://github.com/sanjayb-28/monkeytype-desktop/releases/latest/download/Monkeytype_0.1.0_aarch64.dmg) | macOS Apple Silicon |
 
 
 ## Development
