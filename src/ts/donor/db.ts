@@ -3,9 +3,11 @@
 import type { PersonalBest, PersonalBests, Mode, Mode2 } from "@monkeytype/schemas/shared";
 import type { Difficulty } from "@monkeytype/schemas/configs";
 import type { SnapshotUserTag } from "./constants/default-snapshot";
+import { setXpBarData } from "./signals/header";
 
 // DESKTOP: Minimal result record stored locally
 export interface LocalResult {
+  _id: string;
   wpm: number;
   rawWpm: number;
   acc: number;
@@ -17,11 +19,16 @@ export interface LocalResult {
   numbers: boolean;
   difficulty: string;
   lazyMode: boolean;
+  blindMode: boolean;
   funbox: string;
+  charStats: [number, number, number, number]; // correct, incorrect, extra, missed
+  restartCount: number;
+  quoteLength?: number;
   testDuration: number;
   incompleteTestSeconds: number;
   afkDuration: number;
   timestamp: number;
+  isPb?: boolean;
 }
 
 // Minimal snapshot type for local use
@@ -54,6 +61,9 @@ let dbSnapshot: LocalSnapshot | undefined;
 // DESKTOP: localStorage keys
 const LS_KEY_PB = "localPersonalBests";
 const LS_KEY_RESULTS = "localResults";
+const LS_KEY_TYPING_STATS = "localTypingStats";
+const LS_KEY_XP = "localXp";
+const LS_KEY_STREAK = "localStreak";
 const MAX_STORED_RESULTS = 10000;
 
 function loadFromLocalStorage<T>(key: string): T | undefined {
@@ -86,6 +96,9 @@ export class SnapshotInitError extends Error {
 function getDefaultLocalSnapshot(): LocalSnapshot {
   const savedPBs = loadFromLocalStorage<PersonalBests>(LS_KEY_PB);
   const savedResults = loadFromLocalStorage<LocalResult[]>(LS_KEY_RESULTS);
+  const savedStats = loadFromLocalStorage<LocalSnapshot["typingStats"]>(LS_KEY_TYPING_STATS);
+  const savedXp = loadFromLocalStorage<number>(LS_KEY_XP);
+  const savedStreak = loadFromLocalStorage<{ current: number; max: number; lastTestDate: string }>(LS_KEY_STREAK);
 
   return {
     results: savedResults ?? [],
@@ -96,19 +109,19 @@ function getDefaultLocalSnapshot(): LocalSnapshot {
       zen: {},
       custom: {},
     },
-    name: "",
+    name: "Monkey",
     customThemes: [],
     presets: [],
     tags: [],
-    typingStats: {
+    typingStats: savedStats ?? {
       timeTyping: 0,
       startedTests: 0,
       completedTests: 0,
     },
     favoriteQuotes: {},
-    xp: 0,
-    streak: 0,
-    maxStreak: 0,
+    xp: savedXp ?? 0,
+    streak: savedStreak?.current ?? 0,
+    maxStreak: savedStreak?.max ?? 0,
     inboxUnreadSize: 0,
     connections: {},
     lbOptOut: true,
@@ -354,7 +367,11 @@ export function saveCompletedResult(event: {
   numbers: boolean;
   difficulty: string;
   lazyMode: boolean;
+  blindMode: boolean;
   funbox: string | string[];
+  charStats: [number, number, number, number];
+  restartCount: number;
+  quoteLength?: number;
   testDuration: number;
   incompleteTestSeconds: number;
   afkDuration: number;
@@ -362,6 +379,7 @@ export function saveCompletedResult(event: {
   if (!dbSnapshot) return;
 
   const localResult: LocalResult = {
+    _id: `local_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     wpm: event.wpm,
     rawWpm: event.rawWpm,
     acc: event.acc,
@@ -373,12 +391,20 @@ export function saveCompletedResult(event: {
     numbers: event.numbers ?? false,
     difficulty: event.difficulty,
     lazyMode: event.lazyMode ?? false,
+    blindMode: event.blindMode ?? false,
     funbox: Array.isArray(event.funbox) ? event.funbox.join(",") : (event.funbox ?? "none"),
+    charStats: event.charStats ?? [0, 0, 0, 0],
+    restartCount: event.restartCount ?? 0,
+    quoteLength: event.quoteLength,
     testDuration: event.testDuration,
     incompleteTestSeconds: event.incompleteTestSeconds ?? 0,
     afkDuration: event.afkDuration ?? 0,
     timestamp: Date.now(),
   };
+
+  // Check if this is a PB before adding
+  const wasPb = updatePBIfNeeded(localResult);
+  localResult.isPb = wasPb;
 
   // Add to results array (cap at MAX_STORED_RESULTS)
   dbSnapshot.results.push(localResult);
@@ -387,12 +413,69 @@ export function saveCompletedResult(event: {
   }
   saveToLocalStorage(LS_KEY_RESULTS, dbSnapshot.results);
 
-  // Update PB if this is a new personal best
-  updatePBIfNeeded(localResult);
+  // Update typing stats
+  dbSnapshot.typingStats.completedTests++;
+  dbSnapshot.typingStats.timeTyping += event.testDuration;
+  saveToLocalStorage(LS_KEY_TYPING_STATS, dbSnapshot.typingStats);
+
+  // Update XP (simplified local formula: base = seconds typed, bonuses for accuracy)
+  const baseXp = Math.round(event.testDuration);
+  const accBonus = event.acc >= 100 ? Math.round(baseXp * 0.5) : event.acc >= 95 ? Math.round(baseXp * 0.25) : 0;
+  const earnedXp = baseXp + accBonus;
+  const prevXp = dbSnapshot.xp;
+  dbSnapshot.xp += earnedXp;
+  saveToLocalStorage(LS_KEY_XP, dbSnapshot.xp);
+
+  // Fire XP bar animation in the nav
+  setXpBarData({
+    addedXp: earnedXp,
+    resultingXp: dbSnapshot.xp,
+  });
+
+  // Update streak
+  updateStreak();
 }
 
-function updatePBIfNeeded(r: LocalResult): void {
+// DESKTOP: Track a test start (for typingStats.startedTests)
+export function trackTestStart(): void {
   if (!dbSnapshot) return;
+  dbSnapshot.typingStats.startedTests++;
+  saveToLocalStorage(LS_KEY_TYPING_STATS, dbSnapshot.typingStats);
+}
+
+function updateStreak(): void {
+  if (!dbSnapshot) return;
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const saved = loadFromLocalStorage<{ current: number; max: number; lastTestDate: string }>(LS_KEY_STREAK);
+
+  if (!saved || !saved.lastTestDate) {
+    const streak = { current: 1, max: 1, lastTestDate: today };
+    dbSnapshot.streak = 1;
+    dbSnapshot.maxStreak = 1;
+    saveToLocalStorage(LS_KEY_STREAK, streak);
+    return;
+  }
+
+  if (saved.lastTestDate === today) return; // already counted today
+
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toISOString().slice(0, 10);
+
+  let newCurrent: number;
+  if (saved.lastTestDate === yesterdayStr) {
+    newCurrent = saved.current + 1;
+  } else {
+    newCurrent = 1; // streak broken
+  }
+  const newMax = Math.max(newCurrent, saved.max);
+  dbSnapshot.streak = newCurrent;
+  dbSnapshot.maxStreak = newMax;
+  saveToLocalStorage(LS_KEY_STREAK, { current: newCurrent, max: newMax, lastTestDate: today });
+}
+
+function updatePBIfNeeded(r: LocalResult): boolean {
+  if (!dbSnapshot) return false;
 
   const mode = r.mode as Mode;
   const mode2 = r.mode2;
@@ -415,6 +498,7 @@ function updatePBIfNeeded(r: LocalResult): void {
       (pb.lazyMode ?? false) === r.lazyMode
   );
 
+  let isPb = false;
   if (existing) {
     if (r.wpm > existing.wpm) {
       existing.wpm = r.wpm;
@@ -422,6 +506,7 @@ function updatePBIfNeeded(r: LocalResult): void {
       existing.raw = r.rawWpm;
       existing.consistency = r.consistency;
       existing.timestamp = r.timestamp;
+      isPb = true;
     }
   } else {
     modeMap[mode2].push({
@@ -436,9 +521,11 @@ function updatePBIfNeeded(r: LocalResult): void {
       wpm: r.wpm,
       timestamp: r.timestamp,
     });
+    isPb = true; // first result for this config is always a PB
   }
 
   saveToLocalStorage(LS_KEY_PB, dbSnapshot.personalBests);
+  return isPb;
 }
 
 export function addXp(_xp: number, _breakdown?: unknown): void {

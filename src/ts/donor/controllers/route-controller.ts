@@ -94,14 +94,7 @@ const routes: Route[] = [
   {
     path: "/account",
     load: async (_params, options) => {
-      if (!isAuthAvailable()) {
-        await navigate("/", options);
-        return;
-      }
-      if (!isAuthenticated()) {
-        await navigate("/login", options);
-        return;
-      }
+      // DESKTOP: No auth guard — account page is local-only
       await PageController.change("account", options);
     },
   },

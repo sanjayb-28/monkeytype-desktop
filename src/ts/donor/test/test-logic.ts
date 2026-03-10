@@ -101,6 +101,7 @@ export function startTest(now: number): boolean {
   }
 
   TestState.setActive(true);
+  DB.trackTestStart();
   Replay.startReplayRecording();
   Replay.replayGetWordsList(TestWords.words.list);
   TestInput.resetKeypressTimings();
