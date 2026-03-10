@@ -1,0 +1,92 @@
+@keyframes fire {
+  0% {
+    color: #b31313;
+  }
+  25% {
+    color: #ff9000;
+  }
+  50% {
+    color: #fdda16;
+  }
+  75% {
+    color: #ff9000;
+  }
+  100% {
+    color: #b31313;
+  }
+}
+
+@keyframes fire-bg {
+  0% {
+    background: #b31313;
+  }
+  25% {
+    background: #ff9000;
+  }
+  50% {
+    background: #fdda16;
+  }
+  75% {
+    background: #ff9000;
+  }
+  100% {
+    background: #b31313;
+  }
+}
+
+#caret,
+.pageSettings .section .buttons .button.active,
+.pageSettings .section.languages .buttons .language.active,
+.pageAccount .group.filterButtons .buttons .button.active {
+  animation: fire-bg 5s linear infinite;
+}
+
+[data-ui-element="logo"] h1 {
+  color: var(--main-color);
+}
+
+[data-ui-element="logoSubtext"],
+[data-ui-element="logo"]:hover h1,
+#result .stats .group .bottom,
+[data-nav-item]:hover,
+footer button:hover,
+a:not(.button):not([data-ui-variant="button"]):hover {
+  animation: fire 5s linear infinite;
+}
+
+[data-ui-element="logo"]:hover svg {
+  color: transparent;
+  animation: fire 5s linear infinite;
+}
+
+[data-nav-item="account"]:hover svg {
+  color: transparent;
+  animation: fire 5s linear infinite;
+}
+
+#words {
+  --correct-letter-animation: fire 5s linear infinite;
+}
+
+#words.flipped {
+  --untyped-letter-color: var(--sub-color);
+  --correct-letter-animation: none;
+  --untyped-letter-animation: fire 5s linear infinite;
+}
+
+#words .word.typed letter.correct,
+#words.highlight-word .word.typed letter,
+#words.highlight-next-word .word.typed letter,
+#words.highlight-next-two-words .word.typed letter,
+#words.highlight-next-three-words .word.typed letter {
+  animation: fire 5s linear infinite;
+}
+
+#words.flipped .word.typed letter {
+  animation: none;
+}
+
+#words.highlight-off .word letter,
+#words.highlight-off .word.typed letter {
+  animation: fire 5s linear infinite;
+}

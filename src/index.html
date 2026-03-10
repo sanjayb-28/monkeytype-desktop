@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <load src="html/head.html" />
+
+  <body>
+    <mount data-component="overlays"></mount>
+    <load src="html/warnings.html" />
+    <div class="customBackground"></div>
+
+    <mount data-component="theme"></mount>
+    <div id="barTimerProgress" class="timerMain">
+      <div class="opacityWrapper" style="opacity: 0">
+        <div class="bar"></div>
+      </div>
+    </div>
+    <mount data-component="modals" id="solidmodals"></mount>
+    <mount data-component="popups" id="solidpopups"></mount>
+    <div id="popups">
+      <load src="html/popups.html" />
+    </div>
+    <div id="app" class="content-grid focus">
+      <mount data-component="header"></mount>
+      <main class="full-width content-grid" style="height: 100%">
+        <load src="html/pages/loading.html" />
+
+        <div class="page pageAbout hidden full-width" id="pageAbout">
+          <mount data-component="aboutpage"></mount>
+        </div>
+        <load src="html/pages/settings.html" />
+        <load src="html/pages/login.html" />
+        <load src="html/pages/account.html" />
+
+        <div class="page pageProfile hidden" id="pageProfile"></div>
+        <div class="page pageProfileSearch hidden" id="pageProfileSearch"></div>
+
+        <load src="html/pages/test.html" />
+        <load src="html/pages/404.html" />
+        <load src="html/pages/account-settings.html" />
+        <load src="html/pages/friends.html" />
+        <div class="page pageLeaderboards hidden" id="pageLeaderboards"></div>
+      </main>
+      <mount data-component="footer"></mount>
+    </div>
+
+    <link rel="stylesheet" href="" id="globalFunBoxTheme" type="text/css" />
+    <script type="module" src="ts/donor/index.ts"></script>
+    <mount data-component="devtools"></mount>
+  </body>
+</html>

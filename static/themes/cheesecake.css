@@ -1,0 +1,36 @@
+@keyframes cheesecake {
+  0% {
+    fill: #ff0090;
+  }
+  10% {
+    fill: #c11384;
+  }
+  20% {
+    fill: #832678;
+  }
+  30% {
+    fill: #44396c;
+  }
+  40% {
+    fill: #064c60;
+  }
+  50% {
+    fill: #064c60;
+  }
+  65% {
+    fill: #44396c;
+  }
+  75% {
+    fill: #832678;
+  }
+  85% {
+    fill: #c11384;
+  }
+  100% {
+    fill: #ff0090;
+  }
+}
+
+[data-ui-element="logo"] svg path {
+  animation: 10s linear infinite 0.1s cheesecake;
+}

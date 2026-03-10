@@ -1,0 +1,56 @@
+@keyframes suisei-pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+[data-ui-element="logoText"] {
+  background: linear-gradient(120deg, var(--main-color), var(--sub-color));
+  background-clip: text;
+  color: transparent;
+  padding-bottom: 0.1em;
+  line-height: 1;
+}
+
+[data-ui-element="logoSubtext"] {
+  margin-top: 0em;
+  color: var(--main-color);
+}
+
+header[data-focused] [data-ui-element="logoText"] {
+  background: linear-gradient(-120deg, var(--main-color), var(--sub-color));
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  padding-bottom: 0.1em;
+}
+header[data-focused] [data-nav-item] {
+  background: none;
+}
+[data-nav-item] {
+  border-radius: 150px 150px 32px 32px;
+  background-color: var(--sub-alt-color);
+  color: var(--main-color);
+}
+[data-nav-item]:hover {
+  animation: suisei-pulse 800ms ease-out infinite;
+  color: var(--main-color);
+  background-color: var(--sub-alt-color);
+}
+
+[data-nav-item="leaderboards"],
+[data-nav-item="leaderboards"]:hover {
+  color: var(--sub-color);
+}
+
+[data-nav-item="account"],
+[data-nav-item="account"]:hover {
+  background: none;
+  color: var(--sub-color);
+}

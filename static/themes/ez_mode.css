@@ -1,0 +1,15 @@
+.pageSettings .section h1 {
+  color: var(--text-color);
+}
+
+.pageSettings .section > .text {
+  color: var(--sub-color);
+}
+
+.pageAbout .section .title {
+  color: var(--text-color);
+}
+
+.pageAbout .section p {
+  color: var(--sub-color);
+}

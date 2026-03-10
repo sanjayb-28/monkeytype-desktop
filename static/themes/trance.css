@@ -1,0 +1,75 @@
+@keyframes trance {
+  0% {
+    color: #e51376;
+  }
+  50% {
+    color: #0e77ee;
+  }
+  100% {
+    color: #e51376;
+  }
+}
+
+@keyframes trance-bg {
+  0% {
+    background: #e51376;
+  }
+  50% {
+    background: #0e77ee;
+  }
+  100% {
+    background: #e51376;
+  }
+}
+
+.button.discord::after,
+#caret,
+.pageSettings .section .buttons button.active,
+.pageSettings .section.languages .buttons .language.active,
+.pageAccount .group.filterButtons .buttons button.active {
+  animation: trance-bg 5s linear infinite;
+}
+
+header[data-focused] .button.discord::after,
+header .button.discord.dotHidden::after {
+  animation-name: none !important;
+}
+
+#result .stats .group .bottom,
+[data-nav-item]:hover,
+footer button:hover,
+a:not(.button):not([data-ui-variant="button"]):hover {
+  animation: trance 5s linear infinite;
+}
+
+[data-nav-item="account"]:hover svg {
+  color: transparent;
+  animation: trance 5s linear infinite;
+}
+
+#words {
+  --correct-letter-animation: trance 5s linear infinite;
+}
+
+#words.flipped {
+  --untyped-letter-color: var(--sub-color);
+  --correct-letter-animation: none;
+  --untyped-letter-animation: trance 5s linear infinite;
+}
+
+#words .word.typed letter.correct,
+#words.highlight-word .word.typed letter,
+#words.highlight-next-word .word.typed letter,
+#words.highlight-next-two-words .word.typed letter,
+#words.highlight-next-three-words .word.typed letter {
+  animation: trance 5s linear infinite;
+}
+
+#words.flipped .word.typed letter {
+  animation: none;
+}
+
+#words.highlight-off .word letter,
+#words.highlight-off .word.typed letter {
+  animation: trance 5s linear infinite;
+}

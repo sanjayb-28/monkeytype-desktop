@@ -1,0 +1,86 @@
+@keyframes aurora {
+  0% {
+    color: #009fb4;
+  }
+  25% {
+    color: #00e975;
+  }
+  50% {
+    color: #00ffea;
+  }
+  75% {
+    color: #00e975;
+  }
+  100% {
+    color: #009fb4;
+  }
+}
+
+@keyframes aurora-bg {
+  0% {
+    background: #009fb4;
+  }
+  25% {
+    background: #00e975;
+  }
+  50% {
+    background: #00ffea;
+  }
+  75% {
+    background: #00e975;
+  }
+  100% {
+    background: #009fb4;
+  }
+}
+
+#caret,
+.pageSettings .section .buttons .button.active,
+.pageSettings .section.languages .buttons .language.active,
+.pageAccount .group.filterButtons .buttons .button.active {
+  animation: aurora-bg 5s linear infinite;
+}
+
+[data-ui-element="logo"] h1 {
+  color: var(--main-color);
+}
+[data-ui-element="logoSubtext"],
+[data-ui-element="logo"]:hover h1,
+#result .stats .group .bottom,
+[data-nav-item]:hover,
+footer button:hover,
+a:not(.button):not([data-ui-variant="button"]):hover {
+  animation: aurora 5s linear infinite;
+}
+
+[data-nav-item="account"]:hover svg {
+  color: transparent;
+  animation: aurora 5s linear infinite;
+}
+
+#words {
+  --correct-letter-animation: aurora 5s linear infinite;
+}
+
+#words.flipped {
+  --untyped-letter-color: var(--sub-color);
+  --correct-letter-animation: none;
+  --untyped-letter-animation: aurora 5s linear infinite;
+}
+
+#words .word.typed letter.correct,
+#words.highlight-word .word.typed letter,
+#words.highlight-next-word .word.typed letter,
+#words.highlight-next-two-words .word.typed letter,
+#words.highlight-next-three-words .word.typed letter {
+  animation: aurora 5s linear infinite;
+}
+
+#words.flipped .word.typed letter {
+  animation: none;
+}
+
+#words.highlight-off .word letter,
+#words.highlight-off .word.typed letter {
+  animation: aurora 5s linear infinite;
+}

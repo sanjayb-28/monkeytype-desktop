@@ -1,0 +1,48 @@
+header [data-ui-element="logo"] svg {
+  color: #8c3230;
+}
+
+header [data-ui-element="logoText"] {
+  color: #557d8d;
+}
+
+@keyframes shadow {
+  to {
+    color: #000;
+  }
+}
+
+@keyframes shadow-repeat {
+  50% {
+    color: #000;
+  }
+  100% {
+    color: #eee;
+  }
+}
+
+#liveWpm,
+#liveStatsTextTop {
+  color: white;
+}
+
+#result .stats .group,
+[data-nav-item]:hover,
+footer button:hover,
+a:not(.button):not([data-ui-variant="button"]):hover {
+  animation: shadow-repeat 3s linear infinite forwards;
+}
+
+[data-nav-item="account"]:hover svg {
+  color: currentColor;
+  animation: shadow-repeat 3s linear infinite forwards;
+}
+
+#typingTest .word letter.correct,
+#typingTest #words.highlight-word .word.typed letter.correct,
+#typingTest #words.highlight-next-word .word.typed letter.correct,
+#typingTest #words.highlight-next-two-words .word.typed letter.correct,
+#typingTest #words.highlight-next-three-words .word.typed letter.correct {
+  color: var(--correct-letter-color);
+  animation: shadow 5s linear 1 forwards;
+}

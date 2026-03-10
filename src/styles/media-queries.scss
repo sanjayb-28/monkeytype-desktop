@@ -1,0 +1,66 @@
+body {
+  &.mediaQueryDebugLevel1 {
+    .content-grid {
+      border: 0.1rem dashed var(--main-color);
+    }
+  }
+  &.mediaQueryDebugLevel2 {
+    .content-grid > * {
+      border: 0.1rem dashed var(--sub-color);
+    }
+    .content-grid {
+      border: 0.1rem dashed var(--main-color);
+    }
+  }
+}
+
+//media queries based on tailwind breakpoints https://tailwindcss.com/docs/container
+@import "media-queries-orange";
+@import "media-queries-yellow";
+@import "media-queries-green";
+@import "media-queries-blue";
+@import "media-queries-purple";
+@import "media-queries-brown";
+@import "media-queries-gray";
+
+@media only screen and (max-width: 1875px) {
+  .ad.ad-v {
+    display: none;
+  }
+}
+
+@media only screen and (max-width: 355px) {
+  .ad.ad-h-s {
+    display: none;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  #commandLineMobileButton {
+    display: block !important;
+  }
+}
+
+@media (prefers-reduced-motion) {
+  body:not(.ignore-reduced-motion)
+    *:not(.fa-spin, .animate-\[loader\], .preloader) {
+    animation: none !important;
+    transition: none !important;
+
+    &::after,
+    &::before {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+
+  html {
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  #commandLineMobileButton {
+    display: grid !important;
+  }
+}

@@ -1,0 +1,7 @@
+[data-nav-item] {
+  color: #ba96db;
+}
+
+[data-nav-item]:hover {
+  color: #212b43;
+}

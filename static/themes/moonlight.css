@@ -1,0 +1,39 @@
+/*inspired by GMK MOONLIGHT*/
+
+header[data-focused] {
+  & [data-nav-item],
+  & nav:before,
+  & nav:after {
+    background: var(--bg-color);
+  }
+}
+
+[data-nav-item="test"],
+[data-nav-item="leaderboards"],
+[data-nav-item="about"],
+[data-nav-item="settings"] {
+  border-radius: rem !important;
+  color: #191f28 !important;
+  background: #c69f68;
+  &:hover {
+    border-radius: rem !important;
+    color: #4b5975 !important;
+    transition: 0.25s;
+  }
+}
+
+body.crtmode {
+  & [data-nav-item="test"],
+  & [data-nav-item="leaderboards"],
+  & [data-nav-item="about"],
+  & [data-nav-item="settings"] {
+    box-shadow:
+      3px 0 1px color-mix(in srgb, #c69f68 20%, transparent),
+      -3px 0 color-mix(in srgb, #c69f68 30%, transparent),
+      0 0 3px;
+  }
+
+  & header[data-focused] [data-nav-item] {
+    box-shadow: none;
+  }
+}

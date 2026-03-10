@@ -1,0 +1,37 @@
+#words {
+  --correct-letter-color: var(--text-color);
+  --untyped-letter-color: #586e75;
+}
+
+kbd {
+  color: var(--text-color);
+  background-color: var(--sub-alt-color);
+}
+
+button.text:hover,
+button[data-ui-variant="text"]:hover,
+a:not(.button):not([data-ui-variant="button"]):hover,
+.button.text:hover,
+.textButton:hover {
+  color: var(--caret-color);
+}
+
+button.text.active,
+.button.text.active,
+.textButton.active {
+  color: var(--main-color);
+}
+
+button:not(.textButton):not([data-ui-variant="text"]):hover,
+.button:hover,
+input[type="button"]:hover,
+input[type="reset"]:hover,
+input[type="submit"]:hover {
+  color: var(--bg-color);
+  background: var(--caret-color);
+}
+
+.scrollToTopButton:hover {
+  background: var(--caret-color);
+  color: var(--bg-color);
+}

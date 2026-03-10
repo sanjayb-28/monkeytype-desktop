@@ -1,0 +1,31 @@
+[data-nav-item] {
+  color: #f2ce83;
+}
+
+[data-nav-item]:hover {
+  color: #c6915e;
+}
+
+header [data-ui-element="logoText"] {
+  background-color: #ffffff; /* fallback */
+  background: linear-gradient(
+    #2d2076,
+    #2d2076 25%,
+    #2e3395 25%,
+    #2e3395 50%,
+    #3049ba 50%,
+    #3049ba 75%,
+    #385eca 75%,
+    #385eca
+  );
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  padding-bottom: 0.1em;
+  line-height: 1;
+}
+
+[data-ui-element="logoSubtext"] {
+  margin-top: 0em;
+  /* prevent it from being transparent */
+  -webkit-text-fill-color: #385eca;
+}

@@ -1,0 +1,10 @@
+[data-ui-element="logo"] h1 {
+  color: #f4bc46;
+}
+
+[data-nav-item="test"],
+[data-nav-item="leaderboards"],
+[data-nav-item="about"],
+[data-nav-item="settings"] {
+  --themable-button-text: #d44729;
+}
