@@ -179,12 +179,6 @@ export function verify(result: CompletedEvent): string | null {
         failReasons.push(...requirementFailReasons);
       }
       if (requirementsMet) {
-        if (TestState.activeChallenge.autoRole) {
-          showSuccessNotification(
-            "You will receive a role shortly. Please don't post a screenshot in challenge submissions.",
-            { durationMs: 5000 },
-          );
-        }
         showSuccessNotification(
           `${TestState.activeChallenge.display} challenge passed!`,
         );
