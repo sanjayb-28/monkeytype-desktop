@@ -43,4 +43,4 @@ pnpm tauri build
 
 ## License
 
-Based on [monkeytype/monkeytype](https://github.com/monkeytype/monkeytype). See original repo for license.
+Based on [monkeytype/monkeytype](https://github.com/monkeytypegame/monkeytype). See original repo for license.
