@@ -6,24 +6,18 @@ Fully local — no account, no server, no tracking.
 
 ⭐ **Please leave a star if you like the app!**
 
-## Download (macOS)
+## Install (macOS)
 
-| File | Description |
-|------|------------|
-| [Monkeytype_0.1.0_aarch64.dmg](https://github.com/sanjayb-28/monkeytype-desktop/releases/latest/download/Monkeytype_0.1.0_aarch64.dmg) | macOS Apple Silicon |
-
-### Installation Instructions
-
-Since the app isn't signed with an Apple Developer certificate, macOS will block it. To install:
-
-1. Download and mount the `.dmg` file
-2. **Right-click** the app and select **Open** (not double-click)
-3. Click **Open** in the dialog that appears
-
-Or use Terminal to remove the quarantine flag:
 ```bash
-xattr -d com.apple.quarantine /Applications/Monkeytype.app
+brew tap sanjayb-28/monkeytype
+brew install --cask monkeytype
 ```
+
+### Manual Install
+
+[Download the DMG](https://github.com/sanjayb-28/monkeytype-desktop/releases/latest/download/Monkeytype_0.1.0_aarch64.dmg), drag to Applications, then run `xattr -cr /Applications/Monkeytype.app` in Terminal.
+
+> **Note:** Since the app isn't signed with an Apple Developer certificate ($99/year), macOS will show a security warning when you first try to open it. The terminal command above removes the quarantine flag so the app opens normally.
 
 
 ## Development
