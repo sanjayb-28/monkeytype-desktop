@@ -481,9 +481,10 @@ export const configMetadata: ConfigMetadataObject = {
     group: "caret",
     isBlocked: ({ value }) => {
       if (document.readyState === "complete") {
-        if ((value === "pb" || value === "tagPb") && !isAuthenticated()) {
+        // DESKTOP: pb works locally, but tagPb requires account tags
+        if (value === "tagPb" && !isAuthenticated()) {
           showNoticeNotification(
-            `Pace caret "pb" and "tag pb" are unavailable without an account`,
+            `Pace caret "tag pb" is unavailable without an account`,
           );
           return true;
         }

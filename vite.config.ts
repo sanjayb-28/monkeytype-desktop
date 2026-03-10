@@ -106,6 +106,7 @@ export default defineConfig({
     preprocessorOptions: {
       scss: {
         api: "modern-compiler",
+        silenceDeprecations: ["import", "global-builtin", "slash-div", "color-functions"],
         loadPaths: [path.resolve(__dirname, "node_modules")],
         additionalData(source: string, _fp: string) {
           return `
@@ -114,7 +115,8 @@ export default defineConfig({
             $fonts: ${getFontsScssMap()};
             ${source}`;
         },
-      },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Vite types lag behind Sass API
+      } as any,
     },
   },
   server: {
@@ -124,5 +126,6 @@ export default defineConfig({
   build: {
     target: "esnext",
     outDir: path.resolve(__dirname, "dist"),
+    chunkSizeWarningLimit: 1200,
   },
 });

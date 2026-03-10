@@ -1,24 +1,44 @@
-// DESKTOP: Local-only DB stub replacing the server snapshot system.
-// This file is aliased via Vite resolve.alias to replace the original db.ts
-// For Phase 1, returns empty/undefined. Phase 3 will wire SQLite persistence.
+// DESKTOP: Local-only DB with localStorage-backed persistence for PBs and results.
 
 import type { PersonalBest, PersonalBests, Mode, Mode2 } from "@monkeytype/schemas/shared";
 import type { Difficulty } from "@monkeytype/schemas/configs";
+import type { SnapshotUserTag } from "./constants/default-snapshot";
 
-// Minimal snapshot type for local use — avoids importing removed schemas (users, presets, connections)
+// DESKTOP: Minimal result record stored locally
+export interface LocalResult {
+  wpm: number;
+  rawWpm: number;
+  acc: number;
+  consistency: number;
+  mode: string;
+  mode2: string;
+  language: string;
+  punctuation: boolean;
+  numbers: boolean;
+  difficulty: string;
+  lazyMode: boolean;
+  funbox: string;
+  testDuration: number;
+  incompleteTestSeconds: number;
+  afkDuration: number;
+  timestamp: number;
+}
+
+// Minimal snapshot type for local use
 export interface LocalSnapshot {
-  results: undefined;
+  results: LocalResult[];
   personalBests: PersonalBests;
   name: string;
   customThemes: Array<{ _id: string; name: string; colors: string[] }>;
   presets: never[];
-  tags: never[];
+  tags: SnapshotUserTag[];
   typingStats: {
     timeTyping: number;
     startedTests: number;
     completedTests: number;
   };
-  favoriteQuotes: Record<string, never>;
+  quoteRatings?: Record<string, Record<number, number>>;
+  favoriteQuotes: Record<string, string[]>;
   xp: number;
   streak: number;
   maxStreak: number;
@@ -31,6 +51,29 @@ export interface LocalSnapshot {
 
 let dbSnapshot: LocalSnapshot | undefined;
 
+// DESKTOP: localStorage keys
+const LS_KEY_PB = "localPersonalBests";
+const LS_KEY_RESULTS = "localResults";
+const MAX_STORED_RESULTS = 10000;
+
+function loadFromLocalStorage<T>(key: string): T | undefined {
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw === null) return undefined;
+    return JSON.parse(raw) as T;
+  } catch {
+    return undefined;
+  }
+}
+
+function saveToLocalStorage(key: string, data: unknown): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch (e) {
+    console.error("Failed to save to localStorage:", key, e);
+  }
+}
+
 export class SnapshotInitError extends Error {
   public responseCode: number;
   constructor(message: string, responseCode: number) {
@@ -41,9 +84,12 @@ export class SnapshotInitError extends Error {
 }
 
 function getDefaultLocalSnapshot(): LocalSnapshot {
+  const savedPBs = loadFromLocalStorage<PersonalBests>(LS_KEY_PB);
+  const savedResults = loadFromLocalStorage<LocalResult[]>(LS_KEY_RESULTS);
+
   return {
-    results: undefined,
-    personalBests: {
+    results: savedResults ?? [],
+    personalBests: savedPBs ?? {
       time: {},
       words: {},
       quote: {},
@@ -131,7 +177,28 @@ export async function getUserAverage10<M extends Mode>(
   _difficulty: Difficulty,
   _lazyMode: boolean
 ): Promise<[number, number]> {
-  return [0, 0];
+  const results = dbSnapshot?.results;
+  if (!results || results.length === 0) return [0, 0];
+
+  const matching = results
+    .filter(
+      (r) =>
+        r.mode === _mode &&
+        r.mode2 === String(_mode2) &&
+        r.punctuation === _punctuation &&
+        r.numbers === _numbers &&
+        r.language === _language &&
+        r.difficulty === _difficulty &&
+        r.lazyMode === _lazyMode
+    )
+    .sort((a, b) => b.timestamp - a.timestamp)
+    .slice(0, 10);
+
+  if (matching.length === 0) return [0, 0];
+
+  const avgWpm = matching.reduce((sum, r) => sum + r.wpm, 0) / matching.length;
+  const avgAcc = matching.reduce((sum, r) => sum + r.acc, 0) / matching.length;
+  return [avgWpm, avgAcc];
 }
 
 export async function getUserDailyBest<M extends Mode>(
@@ -143,7 +210,30 @@ export async function getUserDailyBest<M extends Mode>(
   _difficulty: Difficulty,
   _lazyMode: boolean
 ): Promise<number> {
-  return 0;
+  const results = dbSnapshot?.results;
+  if (!results || results.length === 0) return 0;
+
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todayMs = todayStart.getTime();
+
+  let best = 0;
+  for (const r of results) {
+    if (
+      r.timestamp >= todayMs &&
+      r.mode === _mode &&
+      r.mode2 === String(_mode2) &&
+      r.punctuation === _punctuation &&
+      r.numbers === _numbers &&
+      r.language === _language &&
+      r.difficulty === _difficulty &&
+      r.lazyMode === _lazyMode &&
+      r.wpm > best
+    ) {
+      best = r.wpm;
+    }
+  }
+  return best;
 }
 
 export async function getActiveTagsPB<M extends Mode>(
@@ -248,7 +338,107 @@ export type SaveLocalResultData = {
 };
 
 export function saveLocalResult(_data: SaveLocalResultData): void {
-  // DESKTOP: Phase 3 will wire this to SQLite
+  // DESKTOP: no-op — server save path is dead code
+}
+
+// DESKTOP: Save a completed test result locally and update PBs
+export function saveCompletedResult(event: {
+  wpm: number;
+  rawWpm: number;
+  acc: number;
+  consistency: number;
+  mode: string;
+  mode2: string;
+  language: string;
+  punctuation: boolean;
+  numbers: boolean;
+  difficulty: string;
+  lazyMode: boolean;
+  funbox: string | string[];
+  testDuration: number;
+  incompleteTestSeconds: number;
+  afkDuration: number;
+}): void {
+  if (!dbSnapshot) return;
+
+  const localResult: LocalResult = {
+    wpm: event.wpm,
+    rawWpm: event.rawWpm,
+    acc: event.acc,
+    consistency: event.consistency,
+    mode: event.mode,
+    mode2: String(event.mode2),
+    language: event.language,
+    punctuation: event.punctuation ?? false,
+    numbers: event.numbers ?? false,
+    difficulty: event.difficulty,
+    lazyMode: event.lazyMode ?? false,
+    funbox: Array.isArray(event.funbox) ? event.funbox.join(",") : (event.funbox ?? "none"),
+    testDuration: event.testDuration,
+    incompleteTestSeconds: event.incompleteTestSeconds ?? 0,
+    afkDuration: event.afkDuration ?? 0,
+    timestamp: Date.now(),
+  };
+
+  // Add to results array (cap at MAX_STORED_RESULTS)
+  dbSnapshot.results.push(localResult);
+  if (dbSnapshot.results.length > MAX_STORED_RESULTS) {
+    dbSnapshot.results = dbSnapshot.results.slice(-MAX_STORED_RESULTS);
+  }
+  saveToLocalStorage(LS_KEY_RESULTS, dbSnapshot.results);
+
+  // Update PB if this is a new personal best
+  updatePBIfNeeded(localResult);
+}
+
+function updatePBIfNeeded(r: LocalResult): void {
+  if (!dbSnapshot) return;
+
+  const mode = r.mode as Mode;
+  const mode2 = r.mode2;
+
+  if (!dbSnapshot.personalBests[mode]) {
+    (dbSnapshot.personalBests as Record<string, Record<string, PersonalBest[]>>)[mode] = {};
+  }
+
+  const modeMap = dbSnapshot.personalBests[mode] as Record<string, PersonalBest[]>;
+  if (!modeMap[mode2]) {
+    modeMap[mode2] = [];
+  }
+
+  const existing = modeMap[mode2].find(
+    (pb) =>
+      (pb.punctuation ?? false) === r.punctuation &&
+      (pb.numbers ?? false) === r.numbers &&
+      pb.difficulty === r.difficulty &&
+      pb.language === r.language &&
+      (pb.lazyMode ?? false) === r.lazyMode
+  );
+
+  if (existing) {
+    if (r.wpm > existing.wpm) {
+      existing.wpm = r.wpm;
+      existing.acc = r.acc;
+      existing.raw = r.rawWpm;
+      existing.consistency = r.consistency;
+      existing.timestamp = r.timestamp;
+    }
+  } else {
+    modeMap[mode2].push({
+      acc: r.acc,
+      consistency: r.consistency,
+      difficulty: r.difficulty as Difficulty,
+      lazyMode: r.lazyMode,
+      language: r.language as PersonalBest["language"],
+      punctuation: r.punctuation,
+      numbers: r.numbers,
+      raw: r.rawWpm,
+      wpm: r.wpm,
+      timestamp: r.timestamp,
+    });
+  }
+
+  saveToLocalStorage(LS_KEY_PB, dbSnapshot.personalBests);
 }
 
 export function addXp(_xp: number, _breakdown?: unknown): void {

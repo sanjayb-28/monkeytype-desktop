@@ -21,6 +21,7 @@ import "./elements/no-css";
 import "./test/tts";
 import { addToGlobal } from "./utils/misc";
 import * as Focus from "./test/focus";
+import * as TodayTracker from "./test/today-tracker";
 import { applyEngineSettings } from "./anim";
 import { qs, qsa, qsr } from "./utils/dom";
 import { mountComponents } from "./components/mount";
@@ -52,7 +53,10 @@ void loadFromLocalStorage();
 Focus.set(true, true);
 
 // DESKTOP: No Firebase init, no cookies, no auth callback
-void DB.initSnapshot();
+void DB.initSnapshot().then(() => {
+  // DESKTOP: Load today's typing time from stored results
+  TodayTracker.addAllFromToday();
+});
 
 // DESKTOP: Simulate the AuthEvent that normally triggers initial navigation
 // In the original app, firebase auth fires authStateChanged which triggers

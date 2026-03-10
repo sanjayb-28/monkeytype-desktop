@@ -1093,6 +1093,11 @@ export async function finish(difficultyFailed = false): Promise<void> {
     TestWords.currentQuote,
     dontSave,
   );
+
+  // DESKTOP: Save result locally and update PBs
+  if (!dontSave) {
+    DB.saveCompletedResult(completedEvent);
+  }
 }
 
 async function saveResult(
@@ -1151,7 +1156,8 @@ async function saveResult(
     return response;
   }
 
-  const data = response.body.data;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dead code path in desktop
+  const data = response.body.data as any;
   qs("#result .stats .tags .editTagsButton")?.setAttribute(
     "data-result-id",
     data.insertedId,
