@@ -43,4 +43,6 @@ pnpm tauri build
 
 ## License
 
-Based on [monkeytype/monkeytype](https://github.com/monkeytypegame/monkeytype). See original repo for license.
+GPL-3.0 - see [LICENSE](LICENSE) file for details.
+
+This project is a desktop adaptation of [Monkeytype](https://github.com/monkeytypegame/monkeytype) by [Miodec](https://github.com/Miodec), also licensed under GPL-3.0.
