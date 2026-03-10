@@ -1014,6 +1014,7 @@ export async function update(
     qs("main #result .loginTip")?.hide();
     qs("main #result #rateQuoteButton")?.hide();
     qs("main #result #reportQuoteButton")?.hide();
+    qs("main #result #favoriteQuoteButton")?.hide();
     qs("main #result .stats .dailyLeaderboard")?.hide();
     qs("main #result #showWordHistoryButton")?.show();
     qs("main #result #watchReplayButton")?.show();
