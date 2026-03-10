@@ -17,7 +17,7 @@ brew install --cask monkeytype
 
 [Download the DMG](https://github.com/sanjayb-28/monkeytype-desktop/releases/latest/download/Monkeytype_0.1.0_aarch64.dmg), drag to Applications, then run `xattr -cr /Applications/Monkeytype.app` in Terminal.
 
-> **Note:** Since the app isn't signed with an Apple Developer certificate ($99/year), macOS will show a security warning when you first try to open it. The terminal command above removes the quarantine flag so the app opens normally.
+> **Note:** Since the app isn't signed with an Apple Developer certificate, macOS will show a security warning when you first try to open it. The terminal command above removes the quarantine flag so the app opens normally.
 
 
 ## Development
