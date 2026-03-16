@@ -1,4 +1,4 @@
-// DESKTOP: No-op cookies stub — no cookies in local app
+// No-op stub
 export function getCookie(_name: string): string | undefined {
   return undefined;
 }

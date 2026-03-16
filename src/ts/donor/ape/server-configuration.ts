@@ -1,4 +1,4 @@
-// DESKTOP: No-op server configuration stub — no server in local app
+// No-op server configuration stub — no server in local app
 
 export const configurationPromise: Promise<void> = Promise.resolve();
 

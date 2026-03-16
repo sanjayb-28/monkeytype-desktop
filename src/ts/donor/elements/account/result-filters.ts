@@ -1,4 +1,4 @@
-// DESKTOP: Simplified local result-filters for the account page.
+// Simplified local result-filters for the account page.
 // No server, no SlimSelect, no presets — just button-based toggles.
 
 import Config from "../../config";

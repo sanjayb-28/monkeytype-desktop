@@ -1,2 +1,2 @@
-// DESKTOP: No-op stub
+// No-op stub
 export function show(): void {}

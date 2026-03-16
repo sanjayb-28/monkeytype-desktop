@@ -1,4 +1,4 @@
-// DESKTOP: Local account profile card — matches original layout minus server-only features
+// Local account profile card — matches original layout minus server-only features
 import { JSXElement, Show, createMemo } from "solid-js";
 import { getActivePage } from "../../../signals/core";
 import * as DB from "../../../db";

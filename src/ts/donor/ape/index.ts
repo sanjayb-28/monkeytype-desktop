@@ -1,4 +1,4 @@
-// DESKTOP: No-op API client stub. All API calls resolve with empty success responses.
+// No-op API client stub. All API calls resolve with empty success responses.
 // This file is aliased via Vite resolve.alias to replace the original ape/index.ts
 
 type ApeResponse = {

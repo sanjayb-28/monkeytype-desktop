@@ -72,7 +72,7 @@ export async function init(): Promise<void> {
         )
       )?.wpm ?? 0;
   } else if (Config.paceCaret === "tagPb") {
-    // DESKTOP: tagPb is blocked by isBlocked guard — unreachable
+    // tagPb is blocked by isBlocked guard — unreachable
     wpm = await DB.getActiveTagsPB(
       "",
       Config.mode,

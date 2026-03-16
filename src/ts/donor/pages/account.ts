@@ -1,4 +1,4 @@
-// DESKTOP: Local account page — all data from localStorage, no server.
+// Local account page — all data from localStorage, no server.
 import * as DB from "../db";
 import type { LocalResult } from "../db";
 import * as ResultFilters from "../elements/account/result-filters";
@@ -780,7 +780,7 @@ qs(".pageAccount #accountHistoryChart")?.on("click", () => {
   element?.addClass("active");
 });
 
-// DESKTOP: CSV export removed
+// CSV export removed
 
 ConfigEvent.subscribe(({ key }) => {
   if (getActivePage() === "account" && key === "typingSpeedUnit") {

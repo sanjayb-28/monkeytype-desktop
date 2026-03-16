@@ -1,4 +1,4 @@
-// DESKTOP: Simplified User component — no discord avatar, no badges, no flags
+// Simplified User component — no discord avatar, no badges, no flags
 import { AnimationParams } from "animejs";
 import { createEffect, createSignal, JSXElement, on, Show } from "solid-js";
 

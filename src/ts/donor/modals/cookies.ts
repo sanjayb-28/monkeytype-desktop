@@ -1,3 +1,3 @@
-// DESKTOP: No-op cookies modal stub
+// No-op stub
 export function show(): void {}
 export function hide(): void {}

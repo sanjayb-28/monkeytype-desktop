@@ -1,4 +1,4 @@
-// DESKTOP: No-op leaderboard selection stub
+// No-op leaderboard selection stub
 import { z } from "zod";
 
 export const LeaderboardUrlParamsSchema = z.object({});

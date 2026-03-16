@@ -5,7 +5,7 @@ import { H2, H3 } from "../common/Headers";
 
 export function prefetchAboutPage(): void {}
 
-// DESKTOP: Rewritten About page — local-only app, no server queries
+// Rewritten About page — local-only app, no server queries
 export function AboutPage(): JSXElement {
   return (
     <div class="content-grid grid gap-8">

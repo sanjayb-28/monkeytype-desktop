@@ -1,4 +1,4 @@
-// DESKTOP: No-op account settings page stub
+// No-op stub
 import Page from "./page";
 import { qsr } from "../utils/dom";
 

@@ -1,4 +1,4 @@
-// DESKTOP: Rewritten entry point — no backend/auth/ads/cookies/account
+// Rewritten entry point — no backend/auth/ads/cookies/account
 import "./event-handlers/global";
 import "./event-handlers/keymap";
 import "./event-handlers/test";
@@ -52,13 +52,13 @@ applyEngineSettings();
 void loadFromLocalStorage();
 Focus.set(true, true);
 
-// DESKTOP: No Firebase init, no cookies, no auth callback
+// No Firebase init, no cookies, no auth callback
 void DB.initSnapshot().then(() => {
-  // DESKTOP: Load today's typing time from stored results
+  // Load today's typing time from stored results
   TodayTracker.addAllFromToday();
 });
 
-// DESKTOP: Simulate the AuthEvent that normally triggers initial navigation
+// Simulate the AuthEvent that normally triggers initial navigation
 // In the original app, firebase auth fires authStateChanged which triggers
 // route-controller's AuthEvent subscriber to call navigate() and remove body.loading
 void configLoadPromise.then(async () => {

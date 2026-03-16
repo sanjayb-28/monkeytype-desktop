@@ -1,6 +1,5 @@
-// DESKTOP: Local-only DB stub replacing the server snapshot system.
-// This file is aliased via Vite resolve.alias to replace the original db.ts
-// For Phase 1, returns empty/undefined. Phase 3 will wire SQLite persistence.
+// Local-only DB stub replacing the server snapshot system.
+// Aliased via Vite resolve.alias to replace the original db.ts
 
 import type { PersonalBest, PersonalBests, Mode, Mode2 } from "@monkeytype/schemas/shared";
 import type { Difficulty } from "@monkeytype/schemas/configs";
@@ -246,7 +245,7 @@ export type SaveLocalResultData = {
 };
 
 export function saveLocalResult(_data: SaveLocalResultData): void {
-  // DESKTOP: Phase 3 will wire this to SQLite
+  // no-op
 }
 
 export function addXp(_xp: number, _breakdown?: unknown): void {

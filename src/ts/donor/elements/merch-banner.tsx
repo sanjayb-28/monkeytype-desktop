@@ -10,5 +10,5 @@ const closed = new LocalStorageWithSchema({
 });
 
 export function showIfNotClosedBefore(): void {
-  // DESKTOP: No merch banner in desktop app
+  // No merch banner in desktop app
 }

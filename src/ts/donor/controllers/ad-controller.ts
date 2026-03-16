@@ -1,4 +1,4 @@
-// DESKTOP: No-op ad controller stub — no ads in local app
+// No-op stub
 export function init(): void {}
 export function renderResult(): void {}
 export function renderOn(_page: string): void {}

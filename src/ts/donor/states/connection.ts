@@ -1,4 +1,4 @@
-// DESKTOP: No-op connection state — always offline in local app
+// No-op stub — always offline
 export function getStatus(): string { return "offline"; }
 export function get(): string { return "offline"; }
 export function isOnline(): boolean { return false; }

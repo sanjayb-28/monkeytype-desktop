@@ -145,7 +145,7 @@ async function initGroups(): Promise<void> {
   groups["blindMode"] = new SettingsGroup("blindMode", "button");
   groups["quickEnd"] = new SettingsGroup("quickEnd", "button");
   groups["repeatQuotes"] = new SettingsGroup("repeatQuotes", "button");
-  // DESKTOP: ads SettingsGroup removed (no ads in desktop app)
+  // ads SettingsGroup removed (no ads in desktop app)
   groups["alwaysShowWordsHistory"] = new SettingsGroup(
     "alwaysShowWordsHistory",
     "button",
@@ -972,7 +972,7 @@ qsa(".pageSettings .section .groupTitle button")?.on("click", (e) => {
 
   page.setUrlParams({ highlight: configName });
 
-  // DESKTOP: Use monkeytype.com URL for sharing settings links
+  // Use monkeytype.com URL for sharing settings links
   const shareUrl = "https://monkeytype.com/settings?" + new URLSearchParams({ highlight: configName }).toString();
   navigator.clipboard
     .writeText(shareUrl)

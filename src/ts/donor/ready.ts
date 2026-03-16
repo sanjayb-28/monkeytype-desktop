@@ -14,7 +14,7 @@ onDOMReady(async () => {
   qs("body")?.setStyle({
     transition: "background .25s, transform .05s",
   });
-  // DESKTOP: merch banner disabled, server config stubbed, no service worker
+  // merch banner disabled, server config stubbed, no service worker
 
   const app = document.querySelector("#app") as HTMLElement;
   app?.classList.remove("hidden");

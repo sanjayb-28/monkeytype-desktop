@@ -91,7 +91,7 @@ const cachedFetchLanguage = memoizeAsync(
   async (lang: Language): Promise<LanguageObject> => {
     const loaded = await fetchJson<LanguageObject>(`/languages/${lang}.json`);
 
-    // DESKTOP: Skip integrity check — no server-generated hashes available
+    // Skip integrity check — no server-generated hashes available
     return loaded;
   },
 );

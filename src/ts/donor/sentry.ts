@@ -1,4 +1,4 @@
-// DESKTOP: No-op Sentry stub — no error telemetry in local app
+// No-op Sentry stub — no error telemetry in local app
 export function init(): void {}
 export function log(_message: string, _extra?: unknown): void {}
 export function captureException(_error: unknown): void {}

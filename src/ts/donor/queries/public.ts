@@ -1,4 +1,4 @@
-// DESKTOP: No-op stub — all query options return empty data
+// No-op stub — all query options return empty data
 const noop = (key: string, data: unknown = null) => ({ queryKey: [key], queryFn: () => data });
 export function useSupporters(): unknown { return { data: [], isLoading: false }; }
 export function useContributors(): unknown { return { data: [], isLoading: false }; }

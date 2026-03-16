@@ -1,4 +1,4 @@
-// DESKTOP: No-op Firebase stub. All auth functions return false/null/resolved.
+// No-op Firebase stub. All auth functions return false/null/resolved.
 // This file is aliased via Vite resolve.alias to replace the original firebase.ts
 
 export async function init(

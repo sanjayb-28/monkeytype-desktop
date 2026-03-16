@@ -1,4 +1,4 @@
-// DESKTOP: Activity calendar built from local result timestamps
+// Activity calendar built from local result timestamps
 import { JSXElement, onMount } from "solid-js";
 import { UTCDateMini } from "@date-fns/utc/date/mini";
 import { differenceInDays } from "date-fns/differenceInDays";

@@ -481,7 +481,7 @@ export const configMetadata: ConfigMetadataObject = {
     group: "caret",
     isBlocked: ({ value }) => {
       if (document.readyState === "complete") {
-        // DESKTOP: pb works locally, but tagPb requires account tags
+        // pb works locally, but tagPb requires account tags
         if (value === "tagPb" && !isAuthenticated()) {
           showNoticeNotification(
             `Pace caret "tag pb" is unavailable without an account`,
@@ -880,7 +880,7 @@ export const configMetadata: ConfigMetadataObject = {
     group: "hidden",
   },
 
-  // DESKTOP: ads always off
+  // ads always off
   ads: {
     icon: "fa-ad",
     changeRequiresRestart: false,

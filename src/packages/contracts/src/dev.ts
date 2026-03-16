@@ -1,4 +1,4 @@
-// DESKTOP: Stub dev contracts
+// Stub dev contracts
 export type GenerateDataRequest = {
   username: string;
   createUser?: boolean;

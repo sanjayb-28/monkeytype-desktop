@@ -271,7 +271,7 @@ export function restart(options = {} as RestartOptions): void {
   CompositionState.setComposing(false);
   CompositionState.setData("");
 
-  // DESKTOP: No offline banner — app is always local
+  // No offline banner — app is always local
 
   // TestUI.beforeTestRestart();
 
@@ -981,7 +981,7 @@ export async function finish(difficultyFailed = false): Promise<void> {
   const mode2Number = parseInt(completedEvent.mode2);
 
   let tooShort = false;
-  // DESKTOP: Only keep checks relevant to local typing experience
+  // Only keep checks relevant to local typing experience
   // Removed: duration inconsistency, AFK, repeated, WPM cap, raw cap, accuracy range
   // (those are server anti-cheat for leaderboard submissions)
   if (difficultyFailed) {
@@ -1074,7 +1074,7 @@ export async function finish(difficultyFailed = false): Promise<void> {
   );
   Result.updateTodayTracker();
 
-  // DESKTOP: No server save — just update the result display
+  // No server save — just update the result display
   if (!dontSave) {
     TestStats.resetIncomplete();
 
@@ -1095,7 +1095,7 @@ export async function finish(difficultyFailed = false): Promise<void> {
     dontSave,
   );
 
-  // DESKTOP: Save result locally and update PBs
+  // Save result locally and update PBs
   if (!dontSave) {
     DB.saveCompletedResult(completedEvent);
   }

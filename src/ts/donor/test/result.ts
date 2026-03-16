@@ -525,7 +525,7 @@ export async function updateCrown(dontSave: boolean): Promise<void> {
       hideCrown();
       console.debug("Hiding crown");
     } else {
-      // DESKTOP: Show full crown — no server confirmation needed
+      // Show full crown — no server confirmation needed
       console.debug("Showing crown");
       showCrown("normal");
       updateCrownText(
@@ -825,7 +825,7 @@ function updateTestType(randomQuote: Quote | null): void {
   qsa("#result .stats .testType .bottom")?.setHtml(testType);
 }
 
-// DESKTOP: Simplified — removed server anti-cheat display (invalid wpm/raw/accuracy)
+// Simplified — removed server anti-cheat display (invalid wpm/raw/accuracy)
 function updateOther(
   difficultyFailed: boolean,
   failReason: string,
@@ -947,7 +947,7 @@ export async function update(
   qs("#words")?.removeClass("blurred");
   blurInputElement();
   qs("#result .stats .time .bottom .afk")?.setText("");
-  // DESKTOP: No login tip, no video ads, no offline banner
+  // No login tip, no video ads, no offline banner
   qs("#result .loginTip")?.hide();
   qs("#result #watchVideoAdButton")?.hide();
 
@@ -1010,7 +1010,7 @@ export async function update(
   } else {
     qsa("main #result .stats")?.show();
     qs("main #result .chart")?.show();
-    // DESKTOP: No quote rating, no report button, no daily leaderboard
+    // No quote rating, no report button, no daily leaderboard
     qs("main #result .loginTip")?.hide();
     qs("main #result #rateQuoteButton")?.hide();
     qs("main #result #reportQuoteButton")?.hide();

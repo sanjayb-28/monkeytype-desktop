@@ -94,7 +94,7 @@ const routes: Route[] = [
   {
     path: "/account",
     load: async (_params, options) => {
-      // DESKTOP: No auth guard — account page is local-only
+      // No auth guard — account page is local-only
       await PageController.change("account", options);
     },
   },

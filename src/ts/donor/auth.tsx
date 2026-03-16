@@ -1,4 +1,4 @@
-// DESKTOP: No-op auth stub
+// No-op auth stub
 export function onAuthStateChanged(): void {}
 export async function signOut(): Promise<void> {}
 export async function signIn(): Promise<void> {}

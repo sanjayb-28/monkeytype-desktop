@@ -1,4 +1,4 @@
-// DESKTOP: Stub for firebase/auth — provides type-compatible no-ops
+// Stub for firebase/auth — provides type-compatible no-ops
 export class EmailAuthProvider {
   static credential(_email: string, _password: string): unknown { return {}; }
 }

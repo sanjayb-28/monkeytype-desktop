@@ -1,11 +1,11 @@
-// DESKTOP: Local-only DB with localStorage-backed persistence for PBs and results.
+// Local-only DB with localStorage-backed persistence.
 
 import type { PersonalBest, PersonalBests, Mode, Mode2 } from "@monkeytype/schemas/shared";
 import type { Difficulty } from "@monkeytype/schemas/configs";
 import type { SnapshotUserTag } from "./constants/default-snapshot";
 import { setXpBarData } from "./signals/header";
 
-// DESKTOP: Minimal result record stored locally
+// Minimal result record stored locally
 export interface LocalResult {
   _id: string;
   wpm: number;
@@ -58,7 +58,7 @@ export interface LocalSnapshot {
 
 let dbSnapshot: LocalSnapshot | undefined;
 
-// DESKTOP: localStorage keys
+// localStorage keys
 const LS_KEY_PB = "localPersonalBests";
 const LS_KEY_RESULTS = "localResults";
 const LS_KEY_TYPING_STATS = "localTypingStats";
@@ -142,6 +142,7 @@ export function setSnapshot(
 
 export async function initSnapshot(): Promise<LocalSnapshot | false> {
   dbSnapshot = getDefaultLocalSnapshot();
+  validateStreak();
   return dbSnapshot;
 }
 
@@ -351,10 +352,10 @@ export type SaveLocalResultData = {
 };
 
 export function saveLocalResult(_data: SaveLocalResultData): void {
-  // DESKTOP: no-op — server save path is dead code
+  // no-op — server save path unused
 }
 
-// DESKTOP: Save a completed test result locally and update PBs
+// Save a completed test result locally and update PBs
 export function saveCompletedResult(event: {
   wpm: number;
   rawWpm: number;
@@ -436,16 +437,40 @@ export function saveCompletedResult(event: {
   updateStreak();
 }
 
-// DESKTOP: Track a test start (for typingStats.startedTests)
+// Track a test start (for typingStats.startedTests)
 export function trackTestStart(): void {
   if (!dbSnapshot) return;
   dbSnapshot.typingStats.startedTests++;
   saveToLocalStorage(LS_KEY_TYPING_STATS, dbSnapshot.typingStats);
 }
 
+function getUTCDateString(date: Date): string {
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
+}
+
+function getUTCYesterday(): string {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() - 1);
+  return getUTCDateString(d);
+}
+
+function validateStreak(): void {
+  if (!dbSnapshot) return;
+  const saved = loadFromLocalStorage<{ current: number; max: number; lastTestDate: string }>(LS_KEY_STREAK);
+  if (!saved || !saved.lastTestDate) return;
+
+  const today = getUTCDateString(new Date());
+  const yesterday = getUTCYesterday();
+
+  if (saved.lastTestDate !== today && saved.lastTestDate !== yesterday) {
+    dbSnapshot.streak = 0;
+    saveToLocalStorage(LS_KEY_STREAK, { current: 0, max: saved.max, lastTestDate: saved.lastTestDate });
+  }
+}
+
 function updateStreak(): void {
   if (!dbSnapshot) return;
-  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const today = getUTCDateString(new Date());
   const saved = loadFromLocalStorage<{ current: number; max: number; lastTestDate: string }>(LS_KEY_STREAK);
 
   if (!saved || !saved.lastTestDate) {
@@ -456,17 +481,15 @@ function updateStreak(): void {
     return;
   }
 
-  if (saved.lastTestDate === today) return; // already counted today
+  if (saved.lastTestDate === today) return;
 
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().slice(0, 10);
+  const yesterday = getUTCYesterday();
 
   let newCurrent: number;
-  if (saved.lastTestDate === yesterdayStr) {
+  if (saved.lastTestDate === yesterday) {
     newCurrent = saved.current + 1;
   } else {
-    newCurrent = 1; // streak broken
+    newCurrent = 1;
   }
   const newMax = Math.max(newCurrent, saved.max);
   dbSnapshot.streak = newCurrent;
