@@ -19,6 +19,7 @@ import { qs, qsa } from "../utils/dom";
 import { getTheme } from "../states/theme";
 import { download as downloadFile } from "../utils/misc";
 import { getResultVisible } from "../states/test";
+import { envConfig } from "virtual:env-config";
 
 let revealReplay = false;
 
@@ -36,7 +37,7 @@ function revert(): void {
   qs(".wordInputHighlight")?.show();
   qsa(".highlightContainer")?.show();
   if (revealReplay) qs("#resultReplay")?.show();
-  if (!isAuthenticated()) {
+  if (!isAuthenticated() && !envConfig.isDesktop) {
     qs(".pageTest .loginTip")?.show();
   }
   qs("html")?.setStyle({ scrollBehavior: "smooth" });

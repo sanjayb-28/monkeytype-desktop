@@ -3,6 +3,7 @@ import { isAuthenticated } from "../../states/core";
 import * as CustomThemes from "../../collections/custom-themes";
 import * as ThemeController from "../../controllers/theme-controller";
 import { Command, CommandsSubgroup } from "../types";
+import { envConfig } from "virtual:env-config";
 
 const subgroup: CommandsSubgroup = {
   title: "Custom themes list...",
@@ -18,13 +19,13 @@ const commands: Command[] = [
     icon: "fa-palette",
     subgroup,
     available: (): boolean => {
-      return isAuthenticated();
+      return isAuthenticated() || envConfig.isDesktop;
     },
   },
 ];
 
 export function update(): void {
-  if (!isAuthenticated()) {
+  if (!isAuthenticated() && !envConfig.isDesktop) {
     return;
   }
 

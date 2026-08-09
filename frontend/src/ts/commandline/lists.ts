@@ -90,8 +90,8 @@ export const commands: CommandsSubgroup = {
         ]),
 
     //account
-    ...(envConfig.isDesktop ? [] : TagsCommands),
-    ...(envConfig.isDesktop ? [] : PresetsCommands),
+    ...TagsCommands,
+    ...PresetsCommands,
 
     //behavior
     ...buildCommands(

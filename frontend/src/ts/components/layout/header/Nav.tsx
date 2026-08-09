@@ -6,6 +6,7 @@ import {
   onCleanup,
   Show,
 } from "solid-js";
+import { envConfig } from "virtual:env-config";
 
 import { usePendingConnectionsQuery } from "../../../collections/connections";
 import { restartTestEvent } from "../../../events/test";
@@ -36,6 +37,14 @@ import { AccountMenu } from "./AccountMenu";
 import { AccountXpBar } from "./AccountXpBar";
 
 export function Nav(): JSXElement {
+  return (
+    <Show when={envConfig.isDesktop} fallback={<WebNav />}>
+      <DesktopNav />
+    </Show>
+  );
+}
+
+function WebNav(): JSXElement {
   const [getAccountMenuOpen, setAccountMenuOpen] = createSignal(false);
   const isCoarse = () => window.matchMedia("(pointer: coarse)").matches;
   const [accountMenuRef, accountMenuEl] = useRefWithUtils<HTMLDivElement>();
@@ -254,6 +263,92 @@ export function Nav(): JSXElement {
           )}
         </Show>
       </AnimePresence>
+    </nav>
+  );
+}
+
+function DesktopNav(): JSXElement {
+  const buttonClass = () =>
+    cn("aspect-square", { "opacity-(--nav-focus-opacity)": getFocus() });
+
+  createEffectOn(getSnapshot, (snapshot) => {
+    setAnimatedLevel(getLevelFromTotalXp(snapshot?.xp ?? 0));
+  });
+
+  return (
+    <nav
+      class="z-5 flex w-full items-center gap-1 md:gap-2"
+      data-tauri-drag-region
+    >
+      <Button
+        variant="text"
+        fa={{ icon: "fa-keyboard", fixedWidth: true }}
+        router-link
+        href="/"
+        class={buttonClass()}
+        active={getActivePage() === "test"}
+        balloon={{ text: "typing test", position: "down" }}
+        onClick={() => {
+          if (getActivePage() === "test") restartTestEvent.dispatch();
+        }}
+      />
+      <Button
+        variant="text"
+        fa={{ icon: "fa-chart-line", fixedWidth: true }}
+        router-link
+        href="/account"
+        class={buttonClass()}
+        active={getActivePage() === "account"}
+        balloon={{ text: "local activity", position: "down" }}
+      />
+      <Button
+        variant="text"
+        fa={{ icon: "fa-info", fixedWidth: true }}
+        router-link
+        href="/about"
+        class={buttonClass()}
+        active={getActivePage() === "about"}
+        balloon={{ text: "about", position: "down" }}
+      />
+      <Button
+        variant="text"
+        fa={{ icon: "fa-cog", fixedWidth: true }}
+        router-link
+        href="/settings"
+        class={buttonClass()}
+        active={getActivePage() === "settings"}
+        balloon={{ text: "settings", position: "down" }}
+      />
+      <div class="grow" data-tauri-drag-region></div>
+      <Show when={getSnapshot()}>
+        {(snapshot) => (
+          <>
+            <Button
+              variant="text"
+              class={cn(
+                "h-full hover:**:data-[ui-element='userLevel']:bg-(--themable-button-hover-text)",
+                { "opacity-(--nav-focus-opacity)": getFocus() },
+              )}
+              href="/account"
+              router-link
+              dataset={{ "data-nav-item": "account" }}
+              balloon={{ text: "local profile", position: "down" }}
+            >
+              <User
+                user={snapshot()}
+                showAvatar
+                iconsOnly
+                hideNameOnSmallScreens
+                level={getAnimatedLevel()}
+                fontClass="text-em-xs"
+              />
+            </Button>
+            <div class="relative">
+              <AccountXpBar />
+            </div>
+          </>
+        )}
+      </Show>
     </nav>
   );
 }

@@ -1,6 +1,6 @@
 [package]
 name = "monkeytype-desktop"
-version = "0.4.2"
+version = "0.4.3"
 description = "A local-only macOS port of Monkeytype"
 authors = ["Sanjay Baskaran"]
 edition = "2021"

@@ -876,6 +876,17 @@ const modal = new AnimatedModal({
   setup: async (modalEl): Promise<void> => {
     const input = modalEl.qsr("input");
 
+    document.addEventListener(
+      "keydown",
+      (e) => {
+        if (e.key !== "Escape" || !isModalOpen(MODAL_STORE_ID)) return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        void goBackOrHide();
+      },
+      true,
+    );
+
     input.on(
       "input",
       debounce(50, async (e) => {

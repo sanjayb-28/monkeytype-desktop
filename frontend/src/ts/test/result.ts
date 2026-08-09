@@ -1247,9 +1247,12 @@ function updateResultChartDataVisibility(): void {
     button.toggleClass("active", vis[id]);
 
     if (id === "pbLine") {
-      button.toggleClass("hidden", !isAuthenticated());
+      button.toggleClass("hidden", !isAuthenticated() && !envConfig.isDesktop);
     } else if (id === "tagPbLine") {
-      button.toggleClass("hidden", !isAuthenticated() || !hasTagPbAnnotations);
+      button.toggleClass(
+        "hidden",
+        (!isAuthenticated() && !envConfig.isDesktop) || !hasTagPbAnnotations,
+      );
     }
   }
 }

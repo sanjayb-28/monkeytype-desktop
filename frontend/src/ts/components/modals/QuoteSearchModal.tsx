@@ -511,7 +511,7 @@ export function QuoteSearchModal(): JSXElement {
               }}
             />
           </div>
-          <Show when={isAuthenticated()}>
+          <Show when={isAuthenticated() || envConfig.isDesktop}>
             <Button
               variant="button"
               fa={{ icon: "fa-heart", fixedWidth: true }}

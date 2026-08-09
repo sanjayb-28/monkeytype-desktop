@@ -30,6 +30,7 @@ import { isAuthenticated } from "../states/core";
 import { getLastResult, setLastResult } from "../states/snapshot";
 import {
   getActiveTagsOnce,
+  getLocalTagPB,
   getTagsOnce,
   reconcileLocalTagPB,
   saveLocalTagPB,
@@ -91,7 +92,7 @@ export function useResultStatsLiveQuery(
   options?: { lastTen?: true } | { groupByDay?: true },
 ) {
   return useLiveQuery((q) => {
-    if (!isAuthenticated()) return undefined;
+    if (!isAuthenticated() && !envConfig.isDesktop) return undefined;
     const state = queryState();
     if (state === undefined) return undefined;
 
@@ -167,7 +168,7 @@ export function useResultsLiveQuery(options: {
   limit: Accessor<number>;
 }) {
   return useLiveQuery((q) => {
-    if (!isAuthenticated()) return undefined;
+    if (!isAuthenticated() && !envConfig.isDesktop) return undefined;
     const state = options.queryState();
     const sorting = options.sorting();
     const limit = options.limit();
@@ -185,8 +186,21 @@ const resultsCollection = createCollection(
     staleTime: Infinity,
     gcTime: Infinity, //remove when __nonReactive is removed
     queryKey: queryKeys.root(),
-    enabled: isAuthenticated,
+    enabled: () => isAuthenticated() || envConfig.isDesktop,
     queryFn: async () => {
+      if (envConfig.isDesktop) {
+        const { initializeDesktopStorage, loadDesktopData } =
+          await import("../desktop/storage");
+        await initializeDesktopStorage();
+        const results = loadDesktopData().results;
+        if (getLastResult() === undefined && results.length > 0) {
+          const lastResult = results.reduce((acc, cur) =>
+            acc.timestamp < cur.timestamp ? cur : acc,
+          );
+          setLastResult(lastResult);
+        }
+        return results;
+      }
       const tagIds = await getTagsOnce();
       const knownTagIds = new Set([...tagIds.map((it) => it._id)]);
       //const options = parseLoadSubsetOptions(ctx.meta?.loadSubsetOptions);
@@ -315,6 +329,56 @@ const actions = {
 export async function updateTags(
   params: ActionType["updateTags"],
 ): Promise<void> {
+  if (envConfig.isDesktop) {
+    const { loadDesktopData, updateDesktopResultTags } =
+      await import("../desktop/storage");
+    const result = loadDesktopData().results.find(
+      (item) => item._id === params.resultId,
+    );
+    if (result === undefined) throw new Error("Local result not found");
+
+    const tagPbs = params.newTagIds.filter(
+      (tagId) =>
+        result.wpm >
+        getLocalTagPB(
+          tagId,
+          result.mode,
+          result.mode2,
+          result.punctuation,
+          result.numbers,
+          result.language,
+          result.difficulty,
+          result.lazyMode,
+        ),
+    );
+    await updateDesktopResultTags(params.resultId, params.newTagIds);
+    if (resultsCollection.isReady()) {
+      resultsCollection.utils.writeUpdate({
+        _id: params.resultId,
+        tags: params.newTagIds,
+      });
+    }
+    const results = loadDesktopData().results;
+    const tagsToUpdate = [
+      ...params.currentTagIds.filter((tag) => !params.newTagIds.includes(tag)),
+      ...params.newTagIds.filter((tag) => !params.currentTagIds.includes(tag)),
+    ];
+    for (const tagId of tagsToUpdate) {
+      reconcileLocalTagPB(
+        tagId,
+        result.mode,
+        result.mode2,
+        result.punctuation,
+        result.numbers,
+        result.language,
+        result.difficulty,
+        result.lazyMode,
+        results,
+      );
+    }
+    params.afterUpdate?.({ tagPbs });
+    return;
+  }
   if (!resultsCollection.isReady()) {
     // if its not ready yet, send the api request to update the tags
     const response = await Ape.results.updateTags({
@@ -376,6 +440,28 @@ export async function insertLocalResult(
 export async function deleteLocalTag(
   params: ActionType["deleteLocalTag"],
 ): Promise<void> {
+  if (envConfig.isDesktop) {
+    const { loadDesktopData, replaceDesktopData } =
+      await import("../desktop/storage");
+    const data = loadDesktopData();
+    await replaceDesktopData({
+      ...data,
+      results: data.results.map((result) => ({
+        ...result,
+        tags: result.tags.filter((tag) => tag !== params.tagId),
+      })),
+    });
+    if (resultsCollection.isReady()) {
+      for (const result of resultsCollection.values()) {
+        if (!result.tags.includes(params.tagId)) continue;
+        resultsCollection.utils.writeUpdate({
+          _id: result._id,
+          tags: result.tags.filter((tag) => tag !== params.tagId),
+        });
+      }
+    }
+    return;
+  }
   if (!resultsCollection.isReady()) {
     //not loaded yet, don't need to update
     return;
@@ -507,6 +593,14 @@ export const getSingleResultQueryOptions = (_id: string) =>
   queryOptions({
     queryKey: queryKeys.fullResult(_id),
     queryFn: async () => {
+      if (envConfig.isDesktop) {
+        const { loadDesktopData } = await import("../desktop/storage");
+        const result = loadDesktopData().results.find(
+          (candidate) => candidate._id === _id,
+        );
+        if (result === undefined) throw new Error("Local result not found");
+        return result;
+      }
       const response = await Ape.results.getById({ params: { resultId: _id } });
 
       if (response.status !== 200) {
@@ -548,7 +642,7 @@ export function useUserAverage10LiveQuery(options: {
 
   return useLiveQuery((q) => {
     //disable query
-    if (!isAuthenticated()) return undefined;
+    if (!isAuthenticated() && !envConfig.isDesktop) return undefined;
     if (!options.isEnabled()) return undefined;
 
     return q
@@ -570,9 +664,14 @@ export async function getUserAverage10Once(
 ): Promise<{ wpm: number; acc: number }> {
   if (envConfig.isDesktop) {
     const { loadDesktopData } = await import("../desktop/storage");
+    const data = loadDesktopData();
+    const activeTagIds = data.tags
+      .filter((tag) => tag.active)
+      .map((tag) => tag._id);
     const results = getDesktopResultsForSettings(
-      loadDesktopData().results,
+      data.results,
       options,
+      activeTagIds,
     )
       .sort((left, right) => right.timestamp - left.timestamp)
       .slice(0, 10);
@@ -611,9 +710,14 @@ export async function getUserDailyBestOnce(
 ): Promise<{ wpm: number; acc: number }> {
   if (envConfig.isDesktop) {
     const { loadDesktopData } = await import("../desktop/storage");
+    const data = loadDesktopData();
+    const activeTagIds = data.tags
+      .filter((tag) => tag.active)
+      .map((tag) => tag._id);
     const newestEligible = getDesktopResultsForSettings(
-      loadDesktopData().results,
+      data.results,
       options,
+      activeTagIds,
     )
       .filter((result) => result.timestamp >= Date.now() - 24 * 60 * 60 * 1000)
       .sort((left, right) => right.wpm - left.wpm)[0];
@@ -640,6 +744,7 @@ export async function getUserDailyBestOnce(
 function getDesktopResultsForSettings(
   results: SnapshotResult<Mode>[],
   options: CurrentSettingsFilter,
+  activeTagIds: string[] = [],
 ): SnapshotResult<Mode>[] {
   return results.filter(
     (result) =>
@@ -649,7 +754,9 @@ function getDesktopResultsForSettings(
       result.numbers === options.numbers &&
       result.language === options.language &&
       result.difficulty === options.difficulty &&
-      result.lazyMode === options.lazyMode,
+      result.lazyMode === options.lazyMode &&
+      (activeTagIds.length === 0 ||
+        activeTagIds.some((tagId) => result.tags.includes(tagId))),
   );
 }
 

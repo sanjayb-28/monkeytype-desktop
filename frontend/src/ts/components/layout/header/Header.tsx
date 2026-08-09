@@ -1,4 +1,5 @@
 import { JSXElement } from "solid-js";
+import { envConfig } from "virtual:env-config";
 
 import { getIsScreenshotting } from "../../../states/core";
 import { getFocus } from "../../../states/test";
@@ -14,6 +15,7 @@ export function Header(): JSXElement {
       })}
       data-ui-element="header"
       data-focused={getFocus() ? "" : undefined}
+      data-tauri-drag-region={envConfig.isDesktop ? "" : undefined}
     >
       <Logo />
       <Nav />

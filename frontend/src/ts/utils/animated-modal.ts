@@ -147,6 +147,21 @@ export default class AnimatedModal<
   }
 
   async runSetup(): Promise<void> {
+    this.wrapperEl.on("cancel", async (e) => {
+      e.preventDefault();
+      if (this.customEscapeHandler !== undefined) {
+        this.customEscapeHandler(
+          new KeyboardEvent("keydown", { key: "Escape" }),
+        );
+        void this.cleanup?.();
+      } else if (this.storeId !== undefined && isModalOpen(this.storeId)) {
+        this.wrapperEl.setStyle({ pointerEvents: "none" });
+        storeHideModal(this.storeId);
+      } else {
+        await this.hide();
+      }
+    });
+
     this.wrapperEl.on("keydown", async (e) => {
       if (e.key === "Escape" && isPopupVisible(this.dialogId)) {
         e.preventDefault();

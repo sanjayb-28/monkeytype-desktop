@@ -1,4 +1,5 @@
 import { ComponentProps, For, JSXElement, Show } from "solid-js";
+import { envConfig } from "virtual:env-config";
 
 import { configMetadata } from "../../../config/metadata";
 import { setConfig, setQuoteLengthAll } from "../../../config/setters";
@@ -229,13 +230,15 @@ function Mode2(): JSXElement {
         <Mode2Quote class={cn(cardClass, sClass)} ref={quoteRef} />
         <Mode2Custom class={cn(cardClass, sClass)} ref={customRef} />
       </Anime>
-      <TCButton
-        class={
-          "pointer-events-none absolute right-0 self-center px-(--horizontal-padding) opacity-0 transition-[margin-right,background-color,opacity] duration-125 group-hover:pointer-events-auto group-hover:mr-[calc((1.25em+(var(--horizontal-padding)*2))*-1)] group-hover:opacity-100 hover:mr-[calc((1.25em+(var(--horizontal-padding)*2))*-1)] hover:opacity-100"
-        }
-        fa={{ icon: "fa-share" }}
-        onClick={() => showModal("ShareTestSettings")}
-      />
+      <Show when={!envConfig.isDesktop}>
+        <TCButton
+          class={
+            "pointer-events-none absolute right-0 self-center px-(--horizontal-padding) opacity-0 transition-[margin-right,background-color,opacity] duration-125 group-hover:pointer-events-auto group-hover:mr-[calc((1.25em+(var(--horizontal-padding)*2))*-1)] group-hover:opacity-100 hover:mr-[calc((1.25em+(var(--horizontal-padding)*2))*-1)] hover:opacity-100"
+          }
+          fa={{ icon: "fa-share" }}
+          onClick={() => showModal("ShareTestSettings")}
+        />
+      </Show>
     </div>
   );
 }
@@ -332,7 +335,7 @@ function Mode2Quote(props: ComponentProps<"div">): JSXElement {
           />
         )}
       </For>
-      <Show when={isAuthenticated()}>
+      <Show when={isAuthenticated() || envConfig.isDesktop}>
         <TCButton
           fa={{
             icon: "fa-heart",

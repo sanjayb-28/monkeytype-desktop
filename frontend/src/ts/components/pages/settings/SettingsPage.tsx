@@ -78,7 +78,7 @@ export function SettingsPage(): JSXElement {
         {/* while filtering, lay the matching sections out with a uniform gap */}
         <div class={cn(isSettingsSearchActive() && "grid gap-8")}>
           <Section title="behavior">
-            <Show when={isAuthenticated()}>
+            <Show when={isAuthenticated() || envConfig.isDesktop}>
               <Tags />
               <Presets />
             </Show>

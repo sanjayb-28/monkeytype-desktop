@@ -1,15 +1,24 @@
-import { getFunbox } from "@monkeytype/funbox";
 import type { Language } from "@monkeytype/schemas/languages";
+import { PresetSchema, type Preset } from "@monkeytype/schemas/presets";
 import type {
   Mode,
   PersonalBest,
   PersonalBests,
 } from "@monkeytype/schemas/shared";
+import {
+  CustomThemeSchema,
+  type CustomTheme,
+  ResultFiltersSchema,
+  type ResultFilters,
+  UserTagSchema,
+  type UserTag,
+} from "@monkeytype/schemas/users";
 
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 
 import type { SnapshotResult } from "../constants/default-snapshot";
 
+import { getDesktopPersonalBestDecision } from "./personal-best";
 import { normalizeResult } from "./result-normalization";
 
 const legacyStorageKey = "monkeytype.desktop.data.v1";
@@ -17,9 +26,13 @@ const defaultDatabaseName = "monkeytype-desktop-data";
 const metadataKey = "snapshot";
 
 export type DesktopData = {
+  customThemes: CustomTheme[];
   favoriteQuotes: Partial<Record<Language, string[]>>;
   personalBests: PersonalBests;
+  presets: Preset[];
+  resultFilterPresets: ResultFilters[];
   results: SnapshotResult<Mode>[];
+  tags: (UserTag & { active: boolean })[];
   typingStats: {
     timeTyping: number;
     startedTests: number;
@@ -45,6 +58,7 @@ type DesktopDatabase = DBSchema & {
 };
 
 export const defaultDesktopData = (): DesktopData => ({
+  customThemes: [],
   favoriteQuotes: {},
   personalBests: {
     time: {},
@@ -53,7 +67,10 @@ export const defaultDesktopData = (): DesktopData => ({
     zen: {},
     custom: {},
   },
+  presets: [],
+  resultFilterPresets: [],
   results: [],
+  tags: [],
   typingStats: {
     timeTyping: 0,
     startedTests: 0,
@@ -65,8 +82,12 @@ export const defaultDesktopData = (): DesktopData => ({
 });
 
 const metadataFromData = (data: DesktopData): DesktopMetadata => ({
+  customThemes: data.customThemes,
   favoriteQuotes: data.favoriteQuotes,
   personalBests: data.personalBests,
+  presets: data.presets,
+  resultFilterPresets: data.resultFilterPresets,
+  tags: data.tags,
   typingStats: data.typingStats,
   xp: data.xp,
   streak: data.streak,
@@ -104,9 +125,15 @@ const sanitizeMetadata = (value: unknown): DesktopMetadata => {
   const candidate = value as Partial<DesktopMetadata>;
   const typingStats = candidate.typingStats;
   return {
+    customThemes: sanitizeCustomThemes(candidate.customThemes),
     favoriteQuotes: candidate.favoriteQuotes ?? {},
     personalBests:
       candidate.personalBests ?? structuredClone(fallback.personalBests),
+    presets: sanitizePresets(candidate.presets),
+    resultFilterPresets: sanitizeResultFilterPresets(
+      candidate.resultFilterPresets,
+    ),
+    tags: sanitizeTags(candidate.tags),
     typingStats: {
       completedTests: safeNonNegativeNumber(typingStats?.completedTests),
       startedTests: safeNonNegativeNumber(typingStats?.startedTests),
@@ -123,19 +150,80 @@ const sanitizeResults = (value: unknown): SnapshotResult<Mode>[] =>
     ? value.filter(isResultCandidate).map((result) => normalizeResult(result))
     : [];
 
+const sanitizePresets = (value: unknown): Preset[] =>
+  Array.isArray(value)
+    ? value.flatMap((preset) => {
+        if (typeof preset !== "object" || preset === null) return [];
+        const candidate = preset as Record<string, unknown>;
+        const parsed = PresetSchema.safeParse({
+          ...candidate,
+          name:
+            typeof candidate["name"] === "string"
+              ? candidate["name"].replace(/ /g, "_")
+              : candidate["name"],
+        });
+        return parsed.success
+          ? [{ ...parsed.data, name: parsed.data.name.replace(/_/g, " ") }]
+          : [];
+      })
+    : [];
+
+const sanitizeCustomThemes = (value: unknown): CustomTheme[] =>
+  Array.isArray(value)
+    ? value.flatMap((theme) => {
+        const parsed = CustomThemeSchema.safeParse(theme);
+        return parsed.success ? [parsed.data] : [];
+      })
+    : [];
+
+const sanitizeResultFilterPresets = (value: unknown): ResultFilters[] =>
+  Array.isArray(value)
+    ? value.flatMap((preset) => {
+        if (typeof preset !== "object" || preset === null) return [];
+        const candidate = preset as Record<string, unknown>;
+        const parsed = ResultFiltersSchema.safeParse({
+          ...candidate,
+          name:
+            typeof candidate["name"] === "string"
+              ? candidate["name"].replace(/ /g, "_")
+              : candidate["name"],
+        });
+        return parsed.success
+          ? [{ ...parsed.data, name: parsed.data.name.replace(/_/g, " ") }]
+          : [];
+      })
+    : [];
+
+const sanitizeTags = (value: unknown): (UserTag & { active: boolean })[] =>
+  Array.isArray(value)
+    ? value.flatMap((tag) => {
+        if (typeof tag !== "object" || tag === null) return [];
+        const { active, ...candidate } = tag as Record<string, unknown>;
+        const parsed = UserTagSchema.safeParse({
+          ...candidate,
+          name:
+            typeof candidate["name"] === "string"
+              ? candidate["name"].replace(/ /g, "_")
+              : candidate["name"],
+        });
+        return parsed.success
+          ? [
+              {
+                ...parsed.data,
+                name: parsed.data.name.replace(/_/g, " "),
+                active: active === true,
+              },
+            ]
+          : [];
+      })
+    : [];
+
 const rebuildHistoryMetadata = (
   current: DesktopData,
   results: SnapshotResult<Mode>[],
 ): DesktopData => {
   const personalBests = defaultDesktopData().personalBests;
   for (const result of results) {
-    if (
-      result.mode === "quote" ||
-      !getFunbox(result.funbox).every((funbox) => funbox.canGetPb)
-    ) {
-      continue;
-    }
-
     const modeBests = personalBests[result.mode] as Record<
       string,
       PersonalBest[]
@@ -149,7 +237,11 @@ const rebuildHistoryMetadata = (
         best.language === result.language &&
         (best.lazyMode ?? false) === result.lazyMode,
     );
-    if (currentBest !== undefined && currentBest.wpm >= result.wpm) continue;
+    if (
+      !getDesktopPersonalBestDecision(result, currentBest?.wpm).isPersonalBest
+    ) {
+      continue;
+    }
 
     const best: PersonalBest = {
       acc: result.acc,
@@ -259,7 +351,9 @@ export class DesktopStorage {
     }
 
     this.initialized = true;
-    return this.load();
+    const initializedData = this.load();
+    dispatchUpdatedEvent();
+    return initializedData;
   }
 
   load(): DesktopData {
@@ -328,6 +422,24 @@ export class DesktopStorage {
     });
   }
 
+  async updateResultTags(resultId: string, tags: string[]): Promise<void> {
+    return this.enqueue(async () => {
+      const result = this.cache.results.find((item) => item._id === resultId);
+      if (result === undefined) throw new Error("Local result not found");
+
+      const updated = { ...result, tags: [...tags] };
+      const database = await this.dbPromise;
+      await database.put("results", updated);
+      this.cache = {
+        ...this.cache,
+        results: this.cache.results.map((item) =>
+          item._id === resultId ? updated : item,
+        ),
+      };
+      dispatchUpdatedEvent();
+    });
+  }
+
   async clear(): Promise<void> {
     return this.replace(defaultDesktopData());
   }
@@ -388,6 +500,11 @@ export const replaceDesktopData = async (data: DesktopData): Promise<void> =>
 
 export const deleteDesktopResult = async (resultId: string): Promise<void> =>
   getDesktopStorage().deleteResult(resultId);
+
+export const updateDesktopResultTags = async (
+  resultId: string,
+  tags: string[],
+): Promise<void> => getDesktopStorage().updateResultTags(resultId, tags);
 
 export const clearDesktopData = async (): Promise<void> =>
   getDesktopStorage().clear();

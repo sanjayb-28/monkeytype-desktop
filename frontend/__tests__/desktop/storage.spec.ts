@@ -1,8 +1,9 @@
 import "fake-indexeddb/auto";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { SnapshotResult } from "../../src/ts/constants/default-snapshot";
+import defaultResultFilters from "../../src/ts/constants/default-result-filters";
 import { normalizeResult } from "../../src/ts/desktop/result-normalization";
 import {
   defaultDesktopData,
@@ -73,6 +74,18 @@ afterEach(async () => {
 });
 
 describe("desktop storage", () => {
+  it("notifies mounted views when initialization finishes", async () => {
+    const storage = createStorage();
+    const onUpdated = vi.fn();
+    window.addEventListener("monkeytype:desktop-data-updated", onUpdated);
+
+    await storage.initialize();
+
+    expect(onUpdated).toHaveBeenCalledOnce();
+    window.removeEventListener("monkeytype:desktop-data-updated", onUpdated);
+    storage.close();
+  });
+
   it("normalizes a completed-event shaped result before persistence", async () => {
     const storage = createStorage();
     await storage.initialize();
@@ -155,6 +168,92 @@ describe("desktop storage", () => {
     reopenedSession.close();
   });
 
+  it("retains offline collections after the database is reopened", async () => {
+    const databaseName = `monkeytype-desktop-test-${crypto.randomUUID()}`;
+    databaseNames.push(databaseName);
+    const firstSession = new DesktopStorage(databaseName, localStorage);
+    await firstSession.initialize();
+    await firstSession.save({
+      customThemes: [
+        {
+          _id: "local_theme",
+          name: "night_shift",
+          colors: [
+            "#111111",
+            "#222222",
+            "#333333",
+            "#444444",
+            "#555555",
+            "#666666",
+            "#777777",
+            "#888888",
+            "#999999",
+            "#aaaaaa",
+          ],
+        },
+      ],
+      presets: [
+        {
+          _id: "local_preset",
+          name: "short sprint",
+          config: {},
+        },
+      ],
+      resultFilterPresets: [
+        {
+          ...structuredClone(defaultResultFilters),
+          _id: "local_result_filter",
+          name: "focused results",
+        },
+      ],
+      tags: [
+        {
+          _id: "local_tag",
+          name: "deep focus",
+          active: true,
+          personalBests: {
+            time: {},
+            words: {},
+            quote: {},
+            zen: {},
+            custom: {},
+          },
+        },
+      ],
+    });
+    firstSession.close();
+
+    const reopenedSession = new DesktopStorage(databaseName, localStorage);
+    await reopenedSession.initialize();
+
+    expect(reopenedSession.load().customThemes).toMatchObject([
+      { _id: "local_theme", name: "night_shift" },
+    ]);
+    expect(reopenedSession.load().presets).toMatchObject([
+      { _id: "local_preset", name: "short sprint" },
+    ]);
+    expect(reopenedSession.load().resultFilterPresets).toMatchObject([
+      { _id: "local_result_filter", name: "focused results" },
+    ]);
+    expect(reopenedSession.load().tags).toMatchObject([
+      { _id: "local_tag", name: "deep focus", active: true },
+    ]);
+    reopenedSession.close();
+  });
+
+  it("updates local result tags without losing the result", async () => {
+    const storage = createStorage();
+    await storage.initialize();
+    await storage.save({ appendResult: result({ _id: "tagged" }) });
+
+    await storage.updateResultTags("tagged", ["local_tag"]);
+
+    expect(storage.load().results).toMatchObject([
+      { _id: "tagged", tags: ["local_tag"] },
+    ]);
+    storage.close();
+  });
+
   it("rejects failed writes and continues processing later writes", async () => {
     const storage = createStorage();
     await storage.initialize();
@@ -187,6 +286,30 @@ describe("desktop storage", () => {
     expect(data.results[0]).toMatchObject({ _id: "slow", wpm: 80 });
     expect(data.typingStats.completedTests).toBe(1);
     expect(data.personalBests.words["10"]?.[0]?.wpm).toBe(80);
+    storage.close();
+  });
+
+  it("does not promote ineligible results while rebuilding personal bests", async () => {
+    const storage = createStorage();
+    await storage.initialize();
+    await storage.replace({
+      ...defaultDesktopData(),
+      results: [
+        result({ _id: "deleted-best", isPb: true, wpm: 110 }),
+        result({ _id: "bailed", bailedOut: true, wpm: 100 }),
+        result({
+          _id: "inaccurate-stop-on-letter",
+          acc: 99,
+          stopOnLetter: true,
+          wpm: 90,
+        }),
+        result({ _id: "eligible", wpm: 80 }),
+      ],
+    });
+
+    await storage.deleteResult("deleted-best");
+
+    expect(storage.load().personalBests.words["10"]?.[0]?.wpm).toBe(80);
     storage.close();
   });
 });

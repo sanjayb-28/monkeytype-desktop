@@ -1,4 +1,5 @@
 import { createMemo } from "solid-js";
+import { envConfig } from "virtual:env-config";
 
 import { getConfig } from "../../../../config/store";
 import { getLocalPB } from "../../../../db";
@@ -10,8 +11,10 @@ import { getMode2 } from "../../../../utils/misc";
 import { Notice } from "./Notice";
 
 export function PbNotice() {
+  const canUsePersonalBests = () => isAuthenticated() || envConfig.isDesktop;
+
   const displayText = createMemo(() => {
-    if (!isAuthenticated()) return "";
+    if (!canUsePersonalBests()) return "";
     const format = getFormatting();
 
     //react on config.funbox
@@ -45,7 +48,7 @@ export function PbNotice() {
 
   return (
     <Notice
-      when={isAuthenticated() && getConfig.showPb}
+      when={canUsePersonalBests() && getConfig.showPb}
       icon="fa-crown"
       openCommandline="showPb"
       text={displayText()}

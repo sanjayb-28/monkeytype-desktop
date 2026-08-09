@@ -38,6 +38,8 @@ export type SnapshotResult<M extends Mode> = Omit<
   incompleteTestSeconds: number;
   afkDuration: number;
   tags: string[];
+  // Desktop keeps this PB eligibility flag locally; server results omit it.
+  stopOnLetter?: boolean;
   //calculated values
   words: number;
   timeTyping: number;

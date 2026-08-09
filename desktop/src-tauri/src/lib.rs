@@ -1,52 +1,5 @@
 use std::fs;
-use tauri::{Manager, PhysicalPosition, PhysicalSize, Runtime, WebviewWindow};
-
-const WINDOW_EDGE_INSET_LOGICAL: f64 = 16.0;
-const TITLEBAR_ALLOWANCE_LOGICAL: f64 = 32.0;
-
-fn fitted_window_geometry(
-    work_x: i32,
-    work_y: i32,
-    work_width: u32,
-    work_height: u32,
-    scale_factor: f64,
-) -> (PhysicalPosition<i32>, PhysicalSize<u32>) {
-    let edge_inset = (WINDOW_EDGE_INSET_LOGICAL * scale_factor).round() as u32;
-    let titlebar_allowance = (TITLEBAR_ALLOWANCE_LOGICAL * scale_factor).round() as u32;
-    let horizontal_insets = edge_inset.saturating_mul(2);
-    let vertical_insets = horizontal_insets.saturating_add(titlebar_allowance);
-
-    (
-        PhysicalPosition::new(
-            work_x.saturating_add(edge_inset as i32),
-            work_y.saturating_add(edge_inset as i32),
-        ),
-        PhysicalSize::new(
-            work_width.saturating_sub(horizontal_insets),
-            work_height.saturating_sub(vertical_insets),
-        ),
-    )
-}
-
-fn fit_main_window<R: Runtime>(window: &WebviewWindow<R>) -> tauri::Result<()> {
-    let Some(monitor) = window.current_monitor()?.or(window.primary_monitor()?) else {
-        return window.center();
-    };
-
-    let work_area = monitor.work_area();
-    let (position, size) = fitted_window_geometry(
-        work_area.position.x,
-        work_area.position.y,
-        work_area.size.width,
-        work_area.size.height,
-        monitor.scale_factor(),
-    );
-
-    window.set_size(size)?;
-    window.set_position(position)?;
-
-    Ok(())
-}
+use tauri::Manager;
 
 fn valid_suggested_name(name: &str) -> bool {
     !name.is_empty()
@@ -102,8 +55,8 @@ pub fn run() {
             let window = app.get_webview_window("main").ok_or_else(|| {
                 std::io::Error::new(std::io::ErrorKind::NotFound, "main window not found")
             })?;
-            fit_main_window(&window)?;
             window.show()?;
+            window.maximize()?;
             Ok(())
         })
         .run(tauri::generate_context!())
@@ -112,7 +65,7 @@ pub fn run() {
 
 #[cfg(test)]
 mod tests {
-    use super::{fitted_window_geometry, valid_suggested_name};
+    use super::valid_suggested_name;
 
     #[test]
     fn accepts_plain_filenames() {
@@ -124,15 +77,5 @@ mod tests {
         assert!(!valid_suggested_name(""));
         assert!(!valid_suggested_name("../backup.json"));
         assert!(!valid_suggested_name("folder/backup.json"));
-    }
-
-    #[test]
-    fn fits_window_inside_retina_work_area() {
-        let (position, size) = fitted_window_geometry(0, 48, 2940, 1800, 2.0);
-
-        assert_eq!((position.x, position.y), (32, 80));
-        assert_eq!((size.width, size.height), (2876, 1672));
-        assert!(position.x + (size.width as i32) < 2940);
-        assert!(position.y + (size.height as i32) < 1848);
     }
 }

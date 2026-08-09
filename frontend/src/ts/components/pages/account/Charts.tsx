@@ -1,6 +1,7 @@
 import { ResultFilters, ResultFiltersKeys } from "@monkeytype/schemas/users";
 import { useLiveQuery } from "@tanstack/solid-db";
 import { Accessor, createMemo, JSXElement } from "solid-js";
+import { envConfig } from "virtual:env-config";
 
 import {
   buildResultsQuery,
@@ -34,7 +35,7 @@ export function Charts(props: {
   const tags = useTagsLiveQuery();
 
   const resultsQuery = useLiveQuery((q) => {
-    if (!isAuthenticated()) return undefined;
+    if (!isAuthenticated() && !envConfig.isDesktop) return undefined;
     const state = props.queryState();
     if (state === undefined) return undefined;
     return q

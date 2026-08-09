@@ -42,6 +42,7 @@ import {
   loadDesktopData,
   saveDesktopData,
 } from "./desktop/storage";
+import { buildDesktopTestActivity } from "./desktop/activity";
 
 let dbSnapshot: Snapshot | undefined;
 const firstDayOfTheWeek = getFirstDayOfTheWeek();
@@ -52,7 +53,7 @@ export function getSnapshot(): Snapshot | undefined {
 
 export function setSnapshot(
   newSnapshot: Snapshot | undefined,
-  options?: { dispatchEvent?: boolean },
+  options?: { dispatchEvent?: boolean; persistDesktop?: boolean },
 ): void {
   const originalBanned = dbSnapshot?.banned;
   const originalVerified = dbSnapshot?.verified;
@@ -81,7 +82,11 @@ export function setSnapshot(
 
   setSolidSnapshot(newSnapshot);
 
-  if (envConfig.isDesktop && newSnapshot !== undefined) {
+  if (
+    envConfig.isDesktop &&
+    newSnapshot !== undefined &&
+    options?.persistDesktop !== false
+  ) {
     void saveDesktopData({
       favoriteQuotes: newSnapshot.favoriteQuotes ?? {},
       personalBests: newSnapshot.personalBests,
@@ -110,6 +115,11 @@ export async function initSnapshot(): Promise<Snapshot | false> {
     snap.xp = local.xp;
     snap.streak = local.streak;
     snap.maxStreak = local.maxStreak;
+    snap.addedAt =
+      local.results.length === 0
+        ? Date.now()
+        : Math.min(...local.results.map((result) => result.timestamp));
+    snap.testActivity = buildDesktopTestActivity(local.results);
     dbSnapshot = snap;
     setSolidSnapshot(snap);
     return snap;
@@ -350,9 +360,6 @@ export async function saveLocalResult(
   if (!snapshot) return;
 
   if (data.result !== undefined) {
-    if (envConfig.isDesktop) {
-      await saveDesktopData({ appendResult: data.result });
-    }
     void insertLocalResult({ result: data.result });
     setLastResult(data.result);
     if (snapshot.testActivity !== undefined) {
@@ -403,8 +410,21 @@ export async function saveLocalResult(
     }
   }
 
+  if (envConfig.isDesktop) {
+    await saveDesktopData({
+      appendResult: data.result,
+      favoriteQuotes: snapshot.favoriteQuotes ?? {},
+      personalBests: snapshot.personalBests,
+      typingStats: snapshot.typingStats,
+      xp: snapshot.xp,
+      streak: snapshot.streak,
+      maxStreak: snapshot.maxStreak,
+    });
+  }
+
   setSnapshot(snapshot, {
     dispatchEvent: false,
+    persistDesktop: false,
   });
   if (data.xp !== undefined) {
     setXpBarData({
@@ -453,7 +473,12 @@ export function addBadge(badge: Badge): void {
 export async function getTestActivityCalendar(
   yearString: string,
 ): Promise<TestActivityCalendar | undefined> {
-  if (!isAuthenticated() || dbSnapshot === undefined) return undefined;
+  if (
+    (!isAuthenticated() && !envConfig.isDesktop) ||
+    dbSnapshot === undefined
+  ) {
+    return undefined;
+  }
 
   if (yearString === "current") return dbSnapshot.testActivity;
 

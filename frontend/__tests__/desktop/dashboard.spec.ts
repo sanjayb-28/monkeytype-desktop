@@ -1,16 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import type { SnapshotResult } from "../../src/ts/constants/default-snapshot";
+import defaultResultFilters from "../../src/ts/constants/default-result-filters";
 import {
-  buildActivityCalendar,
   calculateDashboardStats,
-  defaultDashboardFilters,
   filterDashboardResults,
-  getPersonalBests,
-  getStoredPersonalBests,
-  groupDailyActivity,
   resultsToCsv,
-  sortDashboardResults,
 } from "../../src/ts/desktop/dashboard";
 
 const day = 24 * 60 * 60 * 1000;
@@ -57,13 +52,15 @@ describe("desktop dashboard", () => {
   it("filters by date, mode, traits and personal best", () => {
     const recentPb = result({ isPb: true, punctuation: true });
     const oldResult = result({ timestamp: now - 40 * day });
-    const filters = {
-      ...defaultDashboardFilters(),
-      mode: "words" as const,
-      pbOnly: true,
-      punctuation: true,
-      range: "30d" as const,
-    };
+    const filters = structuredClone(defaultResultFilters);
+    Object.keys(filters.mode).forEach(
+      (mode) => (filters.mode[mode as keyof typeof filters.mode] = false),
+    );
+    filters.mode.words = true;
+    filters.pb.no = false;
+    filters.punctuation.off = false;
+    filters.date.all = false;
+    filters.date.last_month = true;
 
     expect(filterDashboardResults([recentPb, oldResult], filters, now)).toEqual(
       [recentPb],
@@ -73,7 +70,9 @@ describe("desktop dashboard", () => {
   it("uses local calendar days across daylight-saving transitions", () => {
     const dstNow = new Date(2026, 10, 7, 12).getTime();
     const firstIncludedDay = new Date(2026, 10, 1, 0, 30).getTime();
-    const filters = { ...defaultDashboardFilters(), range: "7d" as const };
+    const filters = structuredClone(defaultResultFilters);
+    filters.date.all = false;
+    filters.date.last_week = true;
 
     expect(
       filterDashboardResults(
@@ -108,79 +107,8 @@ describe("desktop dashboard", () => {
     });
   });
 
-  it("groups activity by local day", () => {
-    const grouped = groupDailyActivity([
-      result({ timeTyping: 20, wpm: 70 }),
-      result({ timeTyping: 40, wpm: 90 }),
-      result({ timestamp: now - day, wpm: 100 }),
-    ]);
-    expect(grouped).toHaveLength(2);
-    expect(grouped[1]).toMatchObject({
-      averageWpm: 80,
-      completed: 2,
-      timeTyping: 60,
-    });
-  });
-
-  it("builds a complete calendar and activity levels", () => {
-    const calendar = buildActivityCalendar(
-      [result(), result({ timestamp: now - day })],
-      2026,
-    );
-    expect(calendar.length).toBeGreaterThanOrEqual(365);
-    expect(calendar.filter((item) => item.count > 0)).toHaveLength(2);
-  });
-
-  it("derives the fastest result for each standard personal-best slot", () => {
-    const bests = getPersonalBests([
-      result({ wpm: 80 }),
-      result({ wpm: 100 }),
-      result({ mode2: "25", wpm: 90 }),
-    ]);
-    expect(bests).toHaveLength(2);
-    expect(bests.find((item) => item.mode2 === "10")?.wpm).toBe(100);
-  });
-
-  it("reads canonical personal bests from desktop snapshot data", () => {
-    expect(
-      getStoredPersonalBests({
-        time: {
-          "15": [
-            {
-              acc: 99,
-              consistency: 95,
-              difficulty: "normal",
-              language: "english",
-              raw: 125,
-              timestamp: now,
-              wpm: 120,
-            },
-          ],
-        },
-        words: {},
-        quote: {},
-        zen: {},
-        custom: {},
-      }),
-    ).toContainEqual({
-      acc: 99,
-      consistency: 95,
-      mode: "time",
-      mode2: "15",
-      rawWpm: 125,
-      timestamp: now,
-      wpm: 120,
-    });
-  });
-
-  it("sorts without mutating input and produces CSV", () => {
+  it("produces CSV without mutating input", () => {
     const slow = result({ wpm: 60 });
-    const fast = result({ wpm: 100 });
-    const source = [slow, fast];
-    expect(
-      sortDashboardResults(source, { direction: "desc", field: "wpm" })[0],
-    ).toBe(fast);
-    expect(source[0]).toBe(slow);
     expect(resultsToCsv([slow])).toContain("timestamp,mode,mode2,language");
     expect(resultsToCsv([slow])).toContain("english,60,84");
   });

@@ -5,6 +5,8 @@ import { render } from "solid-js/web";
 
 import { Theme } from "../components/core/Theme";
 import { CommandlineHotkey } from "../components/hotkeys/CommandlineHotkey";
+import { Footer } from "../components/layout/footer/Footer";
+import { Header } from "../components/layout/header/Header";
 import { NotFoundPage } from "../components/pages/404Page";
 import { SettingsPage } from "../components/pages/settings/SettingsPage";
 import { CapsWarning } from "../components/pages/test/CapsWarning";
@@ -23,8 +25,6 @@ import { queryClient } from "../queries";
 import { qsa } from "../utils/dom";
 import { DesktopAboutPage } from "./components/DesktopAboutPage";
 import { DesktopAccountPage } from "./components/DesktopAccountPage";
-import { DesktopFooter } from "./components/DesktopFooter";
-import { DesktopHeader } from "./components/DesktopHeader";
 import { DesktopModals } from "./components/DesktopModals";
 import { DesktopOverlays } from "./components/DesktopOverlays";
 
@@ -32,8 +32,8 @@ const components: Record<string, () => JSXElement> = {
   theme: () => <Theme />,
   overlays: () => <DesktopOverlays />,
   modals: () => <DesktopModals />,
-  header: () => <DesktopHeader />,
-  footer: () => <DesktopFooter />,
+  header: () => <Header />,
+  footer: () => <Footer />,
   aboutpage: () => <DesktopAboutPage />,
   accountpage: () => <DesktopAccountPage />,
   settingspage: () => <SettingsPage />,

@@ -35,4 +35,7 @@ export async function getIdToken(): Promise<null> {
 export function resetIgnoreAuthCallback(): void {
   return;
 }
+export function setUserState(): void {
+  return;
+}
 export { authPromise };

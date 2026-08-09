@@ -10,12 +10,26 @@ import { queryClient } from "../queries";
 import { baseKey } from "../queries/utils/keys";
 import { applyIdWorkaround, tempId } from "./utils/misc";
 import { isAuthenticated } from "../states/core";
+import { envConfig } from "virtual:env-config";
 
 export type CustomThemeItem = CustomTheme;
 
 const queryKeys = {
   root: () => [...baseKey("customThemes", { isUserSpecific: true })],
 };
+
+async function loadDesktopCustomThemes(): Promise<CustomThemeItem[]> {
+  const { initializeDesktopStorage, loadDesktopData } =
+    await import("../desktop/storage");
+  await initializeDesktopStorage();
+  return loadDesktopData().customThemes;
+}
+
+async function persistDesktopCustomThemes(): Promise<void> {
+  if (!envConfig.isDesktop) return;
+  const { saveDesktopData } = await import("../desktop/storage");
+  await saveDesktopData({ customThemes: getCustomThemes() });
+}
 
 // oxlint-disable-next-line typescript/explicit-function-return-type
 export function useCustomThemesLiveQuery() {
@@ -30,12 +44,12 @@ const customThemesCollection = createCollection(
   queryCollectionOptions({
     staleTime: Infinity,
     gcTime: Infinity, //remove when __nonReactive is removed
-    startSync: true,
     queryKey: queryKeys.root(),
     queryClient,
-    enabled: isAuthenticated,
+    enabled: () => isAuthenticated() || envConfig.isDesktop,
     getKey: (it) => it._id,
     queryFn: async () => {
+      if (envConfig.isDesktop) return loadDesktopCustomThemes();
       const response = await Ape.users.getCustomThemes();
 
       if (response.status !== 200) {
@@ -148,6 +162,15 @@ function getCustomTheme(id: string): CustomThemeItem | undefined {
 export async function addCustomTheme(
   params: ActionType["addCustomTheme"],
 ): Promise<void> {
+  if (envConfig.isDesktop) {
+    customThemesCollection.utils.writeInsert({
+      _id: crypto.randomUUID().replaceAll("-", ""),
+      name: params.name,
+      colors: params.colors,
+    });
+    await persistDesktopCustomThemes();
+    return;
+  }
   const transaction = actions.addCustomTheme(params);
   await transaction.isPersisted.promise;
 }
@@ -155,6 +178,15 @@ export async function addCustomTheme(
 export async function editCustomTheme(
   params: ActionType["editCustomTheme"],
 ): Promise<void> {
+  if (envConfig.isDesktop) {
+    customThemesCollection.utils.writeUpdate({
+      _id: params.themeId,
+      name: params.name,
+      colors: params.colors,
+    });
+    await persistDesktopCustomThemes();
+    return;
+  }
   const transaction = actions.editCustomTheme(params);
   await transaction.isPersisted.promise;
 }
@@ -162,6 +194,11 @@ export async function editCustomTheme(
 export async function deleteCustomTheme(
   params: ActionType["deleteCustomTheme"],
 ): Promise<void> {
+  if (envConfig.isDesktop) {
+    customThemesCollection.utils.writeDelete(params.themeId);
+    await persistDesktopCustomThemes();
+    return;
+  }
   const transaction = actions.deleteCustomTheme(params);
   await transaction.isPersisted.promise;
 }

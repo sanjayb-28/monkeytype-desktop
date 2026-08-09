@@ -40,6 +40,7 @@ type Variant = "basic" | "hasSocials" | "hasBioOrKeyboard" | "full";
 export function UserDetails(props: {
   profile: UserProfile;
   isAccountPage?: true;
+  accountActions?: JSXElement;
 }): JSXElement {
   const variant = () => {
     if (props.profile.banned) return "basic";
@@ -94,9 +95,14 @@ export function UserDetails(props: {
         <ActionButtons
           profile={props.profile}
           isAccountPage={props.isAccountPage}
+          accountActions={props.accountActions}
         />
       </div>
-      <Show when={props.isAccountPage === true}>
+      <Show
+        when={
+          props.isAccountPage === true && props.accountActions === undefined
+        }
+      >
         <EditProfile />
       </Show>
     </div>
@@ -106,6 +112,7 @@ export function UserDetails(props: {
 function ActionButtons(props: {
   profile: UserProfile;
   isAccountPage?: true;
+  accountActions?: JSXElement;
 }): JSXElement {
   const isUsersProfile = () =>
     props.profile.uid !== undefined &&
@@ -159,39 +166,44 @@ function ActionButtons(props: {
         </>
       }
     >
-      <Button
-        balloon={{ text: "Edit profile", position: "left" }}
-        class="h-full rounded-none rounded-tr text-sub hover:text-bg"
-        fa={{ icon: "fa-pen", fixedWidth: true }}
-        onClick={() => {
-          if (props.profile.banned === true) {
-            showNoticeNotification("Banned users cannot edit their profile");
-            return;
-          }
-          showModal("EditProfile");
-        }}
-      />
-      <Button
-        balloon={{ text: "Copy public link", position: "left" }}
-        class="h-full rounded-none rounded-br text-sub hover:text-bg"
-        fa={{ icon: "fa-link", fixedWidth: true }}
-        onClick={() => {
-          const url = `${location.origin}/profile/${props.profile.name}`;
+      <Show
+        when={props.accountActions === undefined}
+        fallback={props.accountActions}
+      >
+        <Button
+          balloon={{ text: "Edit profile", position: "left" }}
+          class="h-full rounded-none rounded-tr text-sub hover:text-bg"
+          fa={{ icon: "fa-pen", fixedWidth: true }}
+          onClick={() => {
+            if (props.profile.banned === true) {
+              showNoticeNotification("Banned users cannot edit their profile");
+              return;
+            }
+            showModal("EditProfile");
+          }}
+        />
+        <Button
+          balloon={{ text: "Copy public link", position: "left" }}
+          class="h-full rounded-none rounded-br text-sub hover:text-bg"
+          fa={{ icon: "fa-link", fixedWidth: true }}
+          onClick={() => {
+            const url = `${location.origin}/profile/${props.profile.name}`;
 
-          navigator.clipboard.writeText(url).then(
-            function () {
-              showNoticeNotification("URL Copied to clipboard");
-            },
-            function () {
-              alert(
-                `Failed to copy using the Clipboard API. Here's the link: ${
-                  url
-                }`,
-              );
-            },
-          );
-        }}
-      />
+            navigator.clipboard.writeText(url).then(
+              function () {
+                showNoticeNotification("URL Copied to clipboard");
+              },
+              function () {
+                alert(
+                  `Failed to copy using the Clipboard API. Here's the link: ${
+                    url
+                  }`,
+                );
+              },
+            );
+          }}
+        />
+      </Show>
     </Show>
   );
 }

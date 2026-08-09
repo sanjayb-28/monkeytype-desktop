@@ -15,20 +15,39 @@ import {
 import { applyIdWorkaround, tempId } from "./utils/misc";
 import { fetchUserFromApi } from "../ape/user";
 import { isAuthenticated } from "../states/core";
+import { envConfig } from "virtual:env-config";
 
 const queryKeys = {
   root: () => [...baseKey("resultFilterPresets", { isUserSpecific: true })],
 };
 
+async function loadDesktopResultFilterPresets(): Promise<ResultFilters[]> {
+  const { initializeDesktopStorage, loadDesktopData } =
+    await import("../desktop/storage");
+  await initializeDesktopStorage();
+  return loadDesktopData().resultFilterPresets;
+}
+
+async function persistDesktopResultFilterPresets(): Promise<void> {
+  if (!envConfig.isDesktop) return;
+  const { saveDesktopData } = await import("../desktop/storage");
+  await saveDesktopData({
+    resultFilterPresets: [...resultFilterPresetsCollection.values()].sort(
+      (left, right) => left.name.localeCompare(right.name),
+    ),
+  });
+}
+
 const resultFilterPresetsCollection = createCollection(
   queryCollectionOptions({
     staleTime: Infinity,
-    startSync: true,
+    gcTime: Infinity,
     queryKey: queryKeys.root(),
     queryClient,
-    enabled: isAuthenticated,
+    enabled: () => isAuthenticated() || envConfig.isDesktop,
     getKey: (it) => it._id,
     queryFn: async () => {
+      if (envConfig.isDesktop) return loadDesktopResultFilterPresets();
       const userData = await fetchUserFromApi();
       if (userData === undefined) return [];
 
@@ -45,7 +64,7 @@ const resultFilterPresetsCollection = createCollection(
 // oxlint-disable-next-line typescript/explicit-function-return-type
 export function useResultFilterPresetsLiveQuery() {
   return useLiveQuery((q) => {
-    if (!isAuthenticated()) return undefined;
+    if (!isAuthenticated() && !envConfig.isDesktop) return undefined;
     return q.from({ presets: resultFilterPresetsCollection });
   });
 }
@@ -118,6 +137,15 @@ const actions = {
 export async function insertResultFilterPreset(
   params: ActionType["insertResultFilterPreset"],
 ): Promise<void> {
+  if (envConfig.isDesktop) {
+    resultFilterPresetsCollection.utils.writeInsert({
+      ...structuredClone(params.filters),
+      _id: crypto.randomUUID().replaceAll("-", ""),
+      name: params.name.replace(/_/g, " "),
+    });
+    await persistDesktopResultFilterPresets();
+    return;
+  }
   const transaction = actions.insertResultFilterPreset(params);
   await transaction.isPersisted.promise;
 }
@@ -125,6 +153,11 @@ export async function insertResultFilterPreset(
 export async function deleteResultFilterPreset(
   params: ActionType["deleteResultFilterPreset"],
 ): Promise<void> {
+  if (envConfig.isDesktop) {
+    resultFilterPresetsCollection.utils.writeDelete(params.presetId);
+    await persistDesktopResultFilterPresets();
+    return;
+  }
   const transaction = actions.deleteResultFilterPreset(params);
   await transaction.isPersisted.promise;
 }

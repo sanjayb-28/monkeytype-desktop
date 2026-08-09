@@ -1,103 +1,57 @@
 import type { Mode } from "@monkeytype/schemas/shared";
 
 import {
+  createEffect,
   createMemo,
   createSignal,
-  For,
   type JSXElement,
   onCleanup,
   Show,
 } from "solid-js";
 
+import type { SnapshotResult } from "../../constants/default-snapshot";
+
+import {
+  createResultsQueryState,
+  useResultsLiveQuery,
+} from "../../collections/results";
+import AsyncContent from "../../components/common/AsyncContent";
 import { Button } from "../../components/common/Button";
-import { Fa } from "../../components/common/Fa";
 import { Page } from "../../components/common/Page";
-import { getConfig } from "../../config/store";
+import { Charts } from "../../components/pages/account/Charts";
+import { Filters } from "../../components/pages/account/Filters";
+import { Table } from "../../components/pages/account/Table";
+import { TestStats } from "../../components/pages/account/TestStats";
+import { UserProfile } from "../../components/pages/profile/UserProfile";
 import {
   showErrorNotification,
   showSuccessNotification,
 } from "../../states/notifications";
+import { filters, setFilters } from "../../states/result-filters";
 import { showSimpleModal } from "../../states/simple-modal";
+import { getSnapshot } from "../../states/snapshot";
+import { qs } from "../../utils/dom";
 import {
   createDesktopBackup,
   parseDesktopBackup,
   restoreDesktopBackup,
 } from "../backup";
-import {
-  buildActivityCalendar,
-  calculateDashboardStats,
-  dashboardRanges,
-  type DashboardFilters,
-  type DashboardSort,
-  defaultDashboardFilters,
-  filterDashboardResults,
-  getStoredPersonalBests,
-  resultsToCsv,
-  sortDashboardResults,
-} from "../dashboard";
+import { filterDashboardResults, resultsToCsv } from "../dashboard";
 import { openTextFile, saveTextFile } from "../native-files";
-import {
-  clearDesktopData,
-  deleteDesktopResult,
-  loadDesktopData,
-} from "../storage";
-import { DesktopActivityCalendar } from "./DesktopActivityCalendar";
-import { DesktopDashboardCharts } from "./DesktopDashboardCharts";
-import { DesktopPersonalBests } from "./DesktopPersonalBests";
-import { DesktopResultsTable } from "./DesktopResultsTable";
-
-const modes: ("all" | Mode)[] = [
-  "all",
-  "time",
-  "words",
-  "quote",
-  "zen",
-  "custom",
-];
-
-const rangeLabels = {
-  all: "all time",
-  "7d": "7 days",
-  "30d": "30 days",
-  "90d": "90 days",
-  "1y": "1 year",
-} as const;
-
-const formatDuration = (seconds: number): string => {
-  if (seconds < 60) return `${Math.round(seconds)}s`;
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m`;
-  const hours = Math.floor(minutes / 60);
-  return `${hours}h ${minutes % 60}m`;
-};
-
-const formatClockDuration = (seconds: number): string => {
-  const safeSeconds = Math.max(0, Math.round(seconds));
-  const hours = Math.floor(safeSeconds / 3600);
-  const minutes = Math.floor((safeSeconds % 3600) / 60);
-  const remainingSeconds = safeSeconds % 60;
-  return [hours, minutes, remainingSeconds]
-    .map((value) => String(value).padStart(2, "0"))
-    .join(":");
-};
-
-const formatNumber = (value: number): string =>
-  new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(value);
+import { clearDesktopData, loadDesktopData } from "../storage";
 
 export function DesktopAccountPage(): JSXElement {
   const [data, setData] = createSignal(loadDesktopData());
-  const [filters, setFilters] = createSignal(defaultDashboardFilters());
-  const [showAdvancedFilters, setShowAdvancedFilters] = createSignal(false);
-  const [sorting, setSorting] = createSignal<DashboardSort>({
+  const [sorting, setSorting] = createSignal<{
+    field: keyof SnapshotResult<Mode>;
+    direction: "asc" | "desc";
+  }>({
     direction: "desc",
     field: "timestamp",
   });
-  const [visibleResults, setVisibleResults] = createSignal(25);
-  const [expandedResultId, setExpandedResultId] = createSignal<string | null>(
+  const [visibleResults, setVisibleResults] = createSignal(10);
+  const [selectedResultId, setSelectedResultId] = createSignal<string | null>(
     null,
-  );
-  const [selectedYear, setSelectedYear] = createSignal(
-    new Date().getFullYear(),
   );
 
   const refresh = (): void => {
@@ -112,39 +66,34 @@ export function DesktopAccountPage(): JSXElement {
     [...data().results].sort((left, right) => right.timestamp - left.timestamp),
   );
   const filteredResults = createMemo(() =>
-    filterDashboardResults(allResults(), filters()),
+    filterDashboardResults(allResults(), filters),
   );
-  const tableResults = createMemo(() =>
-    sortDashboardResults(filteredResults(), sorting()),
-  );
-  const lifetimeStats = createMemo(() => calculateDashboardStats(allResults()));
-  const filteredStats = createMemo(() =>
-    calculateDashboardStats(filteredResults()),
-  );
-  const languages = createMemo(() => [
-    "all",
-    ...new Set(allResults().map((result) => result.language)),
-  ]);
-  const years = createMemo(() => {
-    const resultYears = allResults().map((result) =>
-      new Date(result.timestamp).getFullYear(),
-    );
-    return [...new Set([new Date().getFullYear(), ...resultYears])].sort(
-      (left, right) => right - left,
-    );
+  const queryState = createMemo(() => createResultsQueryState(filters));
+  const resultsQuery = useResultsLiveQuery({
+    queryState,
+    sorting,
+    limit: () => visibleResults() + 1,
   });
-  const calendar = createMemo(() =>
-    buildActivityCalendar(allResults(), selectedYear()),
-  );
-  const personalBests = createMemo(() =>
-    getStoredPersonalBests(data().personalBests),
-  );
+  createEffect(() => {
+    JSON.stringify(filters);
+    setVisibleResults(10);
+    setSelectedResultId(null);
+  });
 
   const exportCsv = async (): Promise<void> => {
     try {
+      const currentSorting = sorting();
+      const direction = currentSorting.direction === "asc" ? 1 : -1;
+      const exportResults = [...filteredResults()].sort((left, right) => {
+        const leftValue = left[currentSorting.field];
+        const rightValue = right[currentSorting.field];
+        return typeof leftValue === "number" && typeof rightValue === "number"
+          ? (leftValue - rightValue) * direction
+          : 0;
+      });
       const saved = await saveTextFile(
         "monkeytype-results.csv",
-        resultsToCsv(allResults()),
+        resultsToCsv(exportResults),
         "text/csv;charset=utf-8",
       );
       if (saved) showSuccessNotification("Local results exported");
@@ -205,211 +154,56 @@ export function DesktopAccountPage(): JSXElement {
     });
   };
 
-  const confirmDeleteResult = (resultId: string): void => {
-    showSimpleModal({
-      title: "delete local result",
-      text: "This permanently removes this result and recalculates local personal bests and typing statistics.",
-      buttonText: "delete",
-      execFn: async () => {
-        await deleteDesktopResult(resultId);
-        return {
-          status: "success",
-          message: "Local result deleted",
-        };
-      },
-    });
-  };
-
-  const updateFilters = (update: Partial<DashboardFilters>): void => {
-    setFilters((current) => ({ ...current, ...update }));
-    setVisibleResults(25);
-    setExpandedResultId(null);
-  };
-
-  const useCurrentSettings = (): void => {
-    updateFilters({
-      ...defaultDashboardFilters(),
-      language: getConfig.language,
-      mode: getConfig.mode,
-      numbers: getConfig.numbers,
-      punctuation: getConfig.punctuation,
-    });
-  };
-
   const selectChartResult = (event: { _id: string; index: number }): void => {
     setSorting({ direction: "desc", field: "timestamp" });
-    setVisibleResults(Math.max(visibleResults(), event.index + 1));
-    setExpandedResultId(event._id);
+    setVisibleResults(
+      Math.max(visibleResults(), Math.ceil((event.index + 1) / 10) * 10),
+    );
+    setSelectedResultId(event._id);
     requestAnimationFrame(() => {
-      document
-        .querySelector(`[data-result-id="${event._id}"]`)
-        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      qs(`#resultList tbody tr:nth-child(${event.index + 1})`)?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
     });
   };
 
   return (
     <Page id="account">
       <div class="desktopDashboard flex flex-col gap-8">
-        <section class="desktopProfileSummary grid overflow-hidden rounded bg-sub-alt md:grid-cols-[21rem_1fr_auto]">
-          <div class="flex items-center gap-4 p-4">
-            <div class="grid h-20 w-20 shrink-0 place-items-center rounded-full bg-bg text-5xl text-sub">
-              <Fa icon="fa-user" />
-            </div>
-            <div class="min-w-0">
-              <div class="truncate text-2xl text-text">local profile</div>
-              <div class="text-em-xs text-sub">offline • this Mac</div>
-            </div>
-          </div>
-
-          <div class="desktopLifetimeStats grid grid-cols-3 items-center p-4">
-            <LifetimeStat
-              label="tests started"
-              value={formatNumber(data().typingStats.startedTests)}
-            />
-            <LifetimeStat
-              label="tests completed"
-              value={formatNumber(data().typingStats.completedTests)}
-            />
-            <LifetimeStat
-              label="time typing"
-              value={formatClockDuration(data().typingStats.timeTyping)}
-            />
-          </div>
-
-          <div class="grid grid-cols-2 md:grid-cols-1">
-            <Button
-              fa={{ icon: "fa-download", fixedWidth: true }}
-              balloon={{ text: "Export local backup", position: "left" }}
-              class="h-full rounded-none text-sub hover:text-bg"
-              onClick={() => void exportBackup()}
-            />
-            <Button
-              fa={{ icon: "fa-upload", fixedWidth: true }}
-              balloon={{ text: "Restore local backup", position: "left" }}
-              class="h-full rounded-none text-sub hover:text-bg"
-              onClick={() => void chooseBackup()}
-            />
-          </div>
-        </section>
-
-        <section class="desktopLocalLifetime grid items-center gap-4 rounded bg-sub-alt p-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div class="text-center text-sub">local lifetime</div>
-          <LifetimeStat
-            label="completion rate"
-            value={`${Math.round(
-              (data().typingStats.completedTests /
-                Math.max(1, data().typingStats.startedTests)) *
-                100,
-            )}%`}
-          />
-          <LifetimeStat
-            label="highest wpm"
-            value={Math.round(lifetimeStats().bestWpm)}
-          />
-          <LifetimeStat
-            label="estimated words"
-            value={formatNumber(lifetimeStats().estimatedWords)}
-          />
-        </section>
-
-        <DesktopPersonalBests personalBests={personalBests()} />
-
-        <DesktopActivityCalendar
-          days={calendar()}
-          onYearChange={setSelectedYear}
-          selectedYear={selectedYear()}
-          years={years()}
-        />
-
-        <section class="desktopDashboardFilters grid gap-5 rounded bg-sub-alt p-5">
-          <div class="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <div class="text-xl text-text">filters</div>
-              <div class="text-em-xs text-sub">
-                showing {filteredResults().length} of {allResults().length}{" "}
-                tests
-              </div>
-            </div>
-            <div class="flex flex-wrap gap-2">
-              <Button
-                text="all"
-                onClick={() => updateFilters(defaultDashboardFilters())}
-              />
-              <Button text="current settings" onClick={useCurrentSettings} />
-              <Button
-                text="advanced"
-                active={showAdvancedFilters()}
-                onClick={() => setShowAdvancedFilters((current) => !current)}
-              />
-              <Button
-                fa={{ icon: "fa-crown" }}
-                text="personal bests"
-                active={filters().pbOnly}
-                onClick={() => updateFilters({ pbOnly: !filters().pbOnly })}
-              />
-            </div>
-          </div>
-
-          <div class="grid gap-5 lg:grid-cols-[1.15fr_1fr_auto]">
-            <FilterGroup label="date range">
-              <For each={dashboardRanges}>
-                {(range) => (
+        <Show when={getSnapshot()} fallback="no local profile found">
+          {(profile) => (
+            <UserProfile
+              profile={profile()}
+              isAccountPage
+              hideLeaderboards
+              accountActions={
+                <>
                   <Button
-                    text={rangeLabels[range]}
-                    active={filters().range === range}
-                    onClick={() => updateFilters({ range })}
+                    fa={{ icon: "fa-download", fixedWidth: true }}
+                    balloon={{
+                      text: "Export local backup",
+                      position: "left",
+                    }}
+                    class="h-full rounded-none rounded-tr text-sub hover:text-bg"
+                    onClick={() => void exportBackup()}
                   />
-                )}
-              </For>
-            </FilterGroup>
-
-            <FilterGroup label="mode">
-              <For each={modes}>
-                {(mode) => (
                   <Button
-                    text={mode}
-                    active={filters().mode === mode}
-                    onClick={() => updateFilters({ mode })}
+                    fa={{ icon: "fa-upload", fixedWidth: true }}
+                    balloon={{
+                      text: "Restore local backup",
+                      position: "left",
+                    }}
+                    class="h-full rounded-none rounded-br text-sub hover:text-bg"
+                    onClick={() => void chooseBackup()}
                   />
-                )}
-              </For>
-            </FilterGroup>
+                </>
+              }
+            />
+          )}
+        </Show>
 
-            <label class="grid content-start gap-2 text-em-sm text-sub">
-              language
-              <select
-                class="rounded border-0 bg-bg px-3 py-2 text-text outline-none focus-visible:ring-2 focus-visible:ring-main"
-                value={filters().language}
-                onChange={(event) =>
-                  updateFilters({ language: event.currentTarget.value })
-                }
-              >
-                <For each={languages()}>
-                  {(language) => (
-                    <option value={language}>
-                      {language.replaceAll("_", " ")}
-                    </option>
-                  )}
-                </For>
-              </select>
-            </label>
-          </div>
-
-          <Show when={showAdvancedFilters()}>
-            <div class="grid gap-5 border-t border-sub pt-5 sm:grid-cols-2">
-              <TriStateFilter
-                label="punctuation"
-                value={filters().punctuation}
-                onChange={(punctuation) => updateFilters({ punctuation })}
-              />
-              <TriStateFilter
-                label="numbers"
-                value={filters().numbers}
-                onChange={(numbers) => updateFilters({ numbers })}
-              />
-            </div>
-          </Show>
-        </section>
+        <Filters filters={filters} onChangeFilters={setFilters} />
 
         <Show
           when={filteredResults().length > 0}
@@ -422,80 +216,44 @@ export function DesktopAccountPage(): JSXElement {
             </div>
           }
         >
-          <DesktopDashboardCharts
-            results={filteredResults()}
-            onResultSelect={selectChartResult}
+          <Charts
+            filters={filters}
+            queryState={queryState}
+            onHistoryChartClick={selectChartResult}
           />
 
-          <section class="grid gap-5">
-            <div>
-              <div class="text-xl text-text">selected test statistics</div>
-              <div class="text-em-xs text-sub">
-                aggregates for the active dashboard filters
-              </div>
-            </div>
-            <div class="grid grid-cols-2 gap-x-6 gap-y-7 sm:grid-cols-3 lg:grid-cols-4">
-              <Metric
-                label="tests completed"
-                value={filteredStats().completed}
-              />
-              <Metric
-                label="time typing"
-                value={formatDuration(filteredStats().timeTyping)}
-              />
-              <Metric
-                label="highest wpm"
-                value={Math.round(filteredStats().bestWpm)}
-              />
-              <Metric
-                label="average wpm"
-                value={Math.round(filteredStats().averageWpm)}
-              />
-              <Metric
-                label="average wpm (last 10)"
-                value={Math.round(filteredStats().lastTenWpm)}
-              />
-              <Metric
-                label="highest accuracy"
-                value={`${filteredStats().bestAccuracy.toFixed(1)}%`}
-              />
-              <Metric
-                label="average accuracy"
-                value={`${filteredStats().averageAccuracy.toFixed(1)}%`}
-              />
-              <Metric
-                label="average consistency"
-                value={`${filteredStats().averageConsistency.toFixed(1)}%`}
-              />
-            </div>
-          </section>
+          <TestStats queryState={queryState} />
 
-          <section class="grid gap-5">
-            <div class="flex flex-wrap items-end justify-between gap-4">
-              <div>
-                <div class="text-xl text-text">result history</div>
-                <div class="text-em-xs text-sub">
-                  select a row to inspect its settings and speed trace
-                </div>
-              </div>
-              <Button
-                fa={{ icon: "fa-file-csv" }}
-                text="export CSV"
-                disabled={allResults().length === 0}
-                onClick={() => void exportCsv()}
-              />
-            </div>
-            <DesktopResultsTable
-              expandedResultId={expandedResultId()}
-              hasMore={tableResults().length > visibleResults()}
-              onExpandedResultChange={setExpandedResultId}
-              onLoadMore={() => setVisibleResults((current) => current + 25)}
-              onDeleteResult={confirmDeleteResult}
-              onSortingChange={setSorting}
-              results={tableResults().slice(0, visibleResults())}
-              sorting={sorting()}
+          <div class="grid grid-cols-3">
+            <Button
+              fa={{ icon: "fa-file-csv" }}
+              text="export CSV"
+              class="col-start-3 w-full"
+              disabled={filteredResults().length === 0}
+              onClick={() => void exportCsv()}
             />
-          </section>
+          </div>
+
+          <AsyncContent collections={{ resultsQuery }}>
+            {({ resultsQueryData }) => (
+              <>
+                <Table
+                  data={resultsQueryData().slice(0, visibleResults())}
+                  onSortingChange={setSorting}
+                  selectedRowId={selectedResultId}
+                />
+                <Button
+                  text="load more"
+                  disabled={
+                    resultsQuery.isLoading ||
+                    resultsQueryData().length <= visibleResults()
+                  }
+                  onClick={() => setVisibleResults((current) => current + 10)}
+                  class="w-full text-center"
+                />
+              </>
+            )}
+          </AsyncContent>
         </Show>
 
         <section class="grid gap-3 border-t border-sub pt-8">
@@ -516,66 +274,5 @@ export function DesktopAccountPage(): JSXElement {
         </section>
       </div>
     </Page>
-  );
-}
-
-function LifetimeStat(props: {
-  label: string;
-  value: number | string;
-}): JSXElement {
-  return (
-    <div class="px-4 first:pl-0">
-      <div class="text-3xl text-main lg:text-4xl">{props.value}</div>
-      <div class="text-em-xs text-sub">{props.label}</div>
-    </div>
-  );
-}
-
-function Metric(props: { label: string; value: number | string }): JSXElement {
-  return (
-    <div>
-      <div class="text-sub">{props.label}</div>
-      <div class="text-2xl leading-tight text-text lg:text-4xl">
-        {props.value}
-      </div>
-    </div>
-  );
-}
-
-function FilterGroup(props: {
-  children: JSXElement;
-  label: string;
-}): JSXElement {
-  return (
-    <div class="grid content-start gap-2">
-      <div class="text-em-sm text-sub">{props.label}</div>
-      <div class="flex flex-wrap gap-2">{props.children}</div>
-    </div>
-  );
-}
-
-function TriStateFilter(props: {
-  label: string;
-  onChange: (value: boolean | null) => void;
-  value: boolean | null;
-}): JSXElement {
-  return (
-    <FilterGroup label={props.label}>
-      <Button
-        text="all"
-        active={props.value === null}
-        onClick={() => props.onChange(null)}
-      />
-      <Button
-        text="off"
-        active={props.value === false}
-        onClick={() => props.onChange(false)}
-      />
-      <Button
-        text="on"
-        active={props.value === true}
-        onClick={() => props.onChange(true)}
-      />
-    </FilterGroup>
   );
 }

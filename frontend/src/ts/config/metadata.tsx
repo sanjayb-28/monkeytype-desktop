@@ -741,7 +741,7 @@ export const configMetadata: ConfigMetadataObject = {
           );
           return true;
         }
-        if (value === "tagPb" && !isAuthenticated()) {
+        if (value === "tagPb" && !isAuthenticated() && !envConfig.isDesktop) {
           showNoticeNotification(
             `Pace caret "tag pb" is unavailable without an account`,
           );
@@ -1137,7 +1137,7 @@ export const configMetadata: ConfigMetadataObject = {
     },
     isBlocked: ({ value }) => {
       if (value === "custom") {
-        if (!isAuthenticated()) {
+        if (!isAuthenticated() && !envConfig.isDesktop) {
           showNoticeNotification(
             "Random theme 'custom' is unavailable without an account",
           );

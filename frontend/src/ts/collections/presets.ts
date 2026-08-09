@@ -12,6 +12,7 @@ import { ConfigGroupName } from "@monkeytype/schemas/configs";
 import { applyIdWorkaround, tempId } from "./utils/misc";
 import { isAuthenticated } from "../states/core";
 import { replaceUnderscoresWithSpaces } from "../utils/strings";
+import { envConfig } from "virtual:env-config";
 
 export type PresetItem = Preset;
 
@@ -19,10 +20,23 @@ const queryKeys = {
   root: () => [...baseKey("presets", { isUserSpecific: true })],
 };
 
+async function loadDesktopPresets(): Promise<PresetItem[]> {
+  const { initializeDesktopStorage, loadDesktopData } =
+    await import("../desktop/storage");
+  await initializeDesktopStorage();
+  return loadDesktopData().presets;
+}
+
+async function persistDesktopPresets(): Promise<void> {
+  if (!envConfig.isDesktop) return;
+  const { saveDesktopData } = await import("../desktop/storage");
+  await saveDesktopData({ presets: getPresets() });
+}
+
 // oxlint-disable-next-line typescript/explicit-function-return-type
 export function usePresetsLiveQuery() {
   return useLiveQuery((q) => {
-    if (!isAuthenticated()) return undefined;
+    if (!isAuthenticated() && !envConfig.isDesktop) return undefined;
     return q
       .from({ preset: presetsCollection })
       .orderBy(({ preset }) => preset.name, "asc");
@@ -35,9 +49,10 @@ const presetsCollection = createCollection(
     gcTime: Infinity, //remove when __nonReactive is removed
     queryKey: queryKeys.root(),
     queryClient,
-    enabled: isAuthenticated,
+    enabled: () => isAuthenticated() || envConfig.isDesktop,
     getKey: (it) => it._id,
     queryFn: async () => {
+      if (envConfig.isDesktop) return loadDesktopPresets();
       const response = await Ape.presets.get();
 
       if (response.status !== 200) {
@@ -180,6 +195,16 @@ function getPreset(id: string): PresetItem | undefined {
 export async function addPreset(
   params: ActionType["addPreset"],
 ): Promise<void> {
+  if (envConfig.isDesktop) {
+    presetsCollection.utils.writeInsert({
+      _id: crypto.randomUUID().replaceAll("-", ""),
+      name: params.name.replace(/_/g, " "),
+      config: params.config,
+      settingGroups: params.settingGroups,
+    });
+    await persistDesktopPresets();
+    return;
+  }
   const transaction = actions.addPreset(params);
   await transaction.isPersisted.promise;
 }
@@ -187,6 +212,20 @@ export async function addPreset(
 export async function editPreset(
   params: ActionType["editPreset"],
 ): Promise<void> {
+  if (envConfig.isDesktop) {
+    const existing = presetsCollection.get(params.presetId);
+    if (existing === undefined) throw new Error("Preset not found");
+    presetsCollection.utils.writeUpdate({
+      _id: params.presetId,
+      name: params.name.replace(/_/g, " "),
+      ...(params.config !== undefined && { config: params.config }),
+      ...(params.settingGroups !== undefined && {
+        settingGroups: params.settingGroups,
+      }),
+    });
+    await persistDesktopPresets();
+    return;
+  }
   const transaction = actions.editPreset(params);
   await transaction.isPersisted.promise;
 }
@@ -194,6 +233,11 @@ export async function editPreset(
 export async function deletePreset(
   params: ActionType["deletePreset"],
 ): Promise<void> {
+  if (envConfig.isDesktop) {
+    presetsCollection.utils.writeDelete(params.presetId);
+    await persistDesktopPresets();
+    return;
+  }
   const transaction = actions.deletePreset(params);
   await transaction.isPersisted.promise;
 }
