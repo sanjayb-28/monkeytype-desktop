@@ -1,4 +1,5 @@
 import { createHotkeySequence } from "@tanstack/solid-hotkeys";
+import { envConfig } from "virtual:env-config";
 
 createHotkeySequence(
   [
@@ -14,6 +15,8 @@ createHotkeySequence(
     "A",
   ],
   () => {
-    window.open("https://keymash.io/", "_blank");
+    if (!envConfig.isDesktop) {
+      window.open("https://keymash.io/", "_blank");
+    }
   },
 );

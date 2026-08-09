@@ -87,17 +87,19 @@ function sassList(values) {
 
 function getPlugins({
   isDevelopment,
+  isDesktop,
   env,
   useSentry,
 }: {
   isDevelopment: boolean;
+  isDesktop: boolean;
   env: Record<string, string>;
   useSentry: boolean;
 }): PluginOption[] {
   const clientVersion = getClientVersion(isDevelopment);
 
   const plugins: PluginOption[] = [
-    envConfig({ isDevelopment, clientVersion, env }),
+    envConfig({ isDevelopment, isDesktop, clientVersion, env }),
     languageHashes({ skip: isDevelopment }),
     injectHTML() as PluginOption,
     tailwindcss(),
@@ -122,59 +124,61 @@ function getPlugins({
     fontawesomeSubset(),
     versionFile({ clientVersion }),
     ViteMinifyPlugin(),
-    VitePWA({
-      // injectRegister: "networkfirst",
-      injectRegister: null,
-      registerType: "autoUpdate",
-      manifest: {
-        short_name: "Monkeytype",
-        name: "Monkeytype",
-        start_url: "/",
-        icons: [
-          {
-            src: "/images/icons/maskable_icon_x512.png",
-            sizes: "512x512",
-            type: "image/png",
-            purpose: "maskable",
+    !isDesktop
+      ? VitePWA({
+          // injectRegister: "networkfirst",
+          injectRegister: null,
+          registerType: "autoUpdate",
+          manifest: {
+            short_name: "Monkeytype",
+            name: "Monkeytype",
+            start_url: "/",
+            icons: [
+              {
+                src: "/images/icons/maskable_icon_x512.png",
+                sizes: "512x512",
+                type: "image/png",
+                purpose: "maskable",
+              },
+              {
+                src: "/images/icons/general_icon_x512.png",
+                sizes: "512x512",
+                type: "image/png",
+                purpose: "any",
+              },
+            ],
+            background_color: "#323437",
+            display: "standalone",
+            theme_color: "#323437",
           },
-          {
-            src: "/images/icons/general_icon_x512.png",
-            sizes: "512x512",
-            type: "image/png",
-            purpose: "any",
+          manifestFilename: "manifest.json",
+          workbox: {
+            clientsClaim: true,
+            cleanupOutdatedCaches: true,
+            globIgnores: ["**/.*"],
+            globPatterns: [],
+            navigateFallback: "",
+            runtimeCaching: [
+              {
+                urlPattern: (options) => {
+                  const isApi = options.url.hostname === "api.monkeytype.com";
+                  return options.sameOrigin && !isApi;
+                },
+                handler: "NetworkFirst",
+                options: {},
+              },
+              {
+                urlPattern: (options) => {
+                  //disable caching for version.json
+                  return options.url.pathname === "/version.json";
+                },
+                handler: "NetworkOnly",
+                options: {},
+              },
+            ],
           },
-        ],
-        background_color: "#323437",
-        display: "standalone",
-        theme_color: "#323437",
-      },
-      manifestFilename: "manifest.json",
-      workbox: {
-        clientsClaim: true,
-        cleanupOutdatedCaches: true,
-        globIgnores: ["**/.*"],
-        globPatterns: [],
-        navigateFallback: "",
-        runtimeCaching: [
-          {
-            urlPattern: (options) => {
-              const isApi = options.url.hostname === "api.monkeytype.com";
-              return options.sameOrigin && !isApi;
-            },
-            handler: "NetworkFirst",
-            options: {},
-          },
-          {
-            urlPattern: (options) => {
-              //disable caching for version.json
-              return options.url.pathname === "/version.json";
-            },
-            handler: "NetworkOnly",
-            options: {},
-          },
-        ],
-      },
-    }),
+        })
+      : null,
     useSentry
       ? sentryVitePlugin({
           authToken: env["SENTRY_AUTH_TOKEN"],
@@ -197,8 +201,10 @@ function getPlugins({
 
 function getBuildOptions({
   enableSourceMaps,
+  isDesktop,
 }: {
   enableSourceMaps: boolean;
+  isDesktop: boolean;
 }): BuildEnvironmentOptions {
   return {
     sourcemap: enableSourceMaps,
@@ -206,14 +212,16 @@ function getBuildOptions({
     outDir: "../dist",
     assetsInlineLimit: 0, //dont inline small files as data
     rolldownOptions: {
-      input: {
-        monkeytype: path.resolve(__dirname, "src/index.html"),
-        email: path.resolve(__dirname, "src/email-handler.html"),
-        privacy: path.resolve(__dirname, "src/privacy-policy.html"),
-        security: path.resolve(__dirname, "src/security-policy.html"),
-        terms: path.resolve(__dirname, "src/terms-of-service.html"),
-        404: path.resolve(__dirname, "src/404.html"),
-      },
+      input: isDesktop
+        ? { desktop: path.resolve(__dirname, "src/desktop.html") }
+        : {
+            monkeytype: path.resolve(__dirname, "src/index.html"),
+            email: path.resolve(__dirname, "src/email-handler.html"),
+            privacy: path.resolve(__dirname, "src/privacy-policy.html"),
+            security: path.resolve(__dirname, "src/security-policy.html"),
+            terms: path.resolve(__dirname, "src/terms-of-service.html"),
+            404: path.resolve(__dirname, "src/404.html"),
+          },
       output: {
         assetFileNames: (assetInfo) => {
           let extType = (assetInfo.names[0] as string).split(".").at(1);
@@ -328,10 +336,11 @@ function getCssOptions({
 
 export default defineConfig(({ mode }): UserConfig => {
   const env = loadEnv(mode, process.cwd(), "");
-  const useSentry = env["SENTRY"] !== undefined;
-  const isDevelopment = mode !== "production";
+  const isDesktop = process.env["MONKEYTYPE_DESKTOP"] === "true";
+  const useSentry = !isDesktop && env["SENTRY"] !== undefined;
+  const isDevelopment = mode !== "production" && !isDesktop;
 
-  if (!isDevelopment) {
+  if (!isDevelopment && !isDesktop) {
     if (env["RECAPTCHA_SITE_KEY"] === undefined) {
       throw new Error(`${mode}: RECAPTCHA_SITE_KEY is not defined`);
     }
@@ -341,8 +350,13 @@ export default defineConfig(({ mode }): UserConfig => {
   }
 
   return {
-    plugins: getPlugins({ isDevelopment, useSentry: useSentry, env }),
-    build: getBuildOptions({ enableSourceMaps: useSentry }),
+    plugins: getPlugins({
+      isDevelopment,
+      isDesktop,
+      useSentry: useSentry,
+      env,
+    }),
+    build: getBuildOptions({ enableSourceMaps: useSentry, isDesktop }),
     css: getCssOptions({ isDevelopment }),
     server: {
       open: env["SERVER_OPEN"] !== "false",
@@ -355,14 +369,73 @@ export default defineConfig(({ mode }): UserConfig => {
       },
     },
     resolve: {
-      alias: isDevelopment
-        ? []
-        : [
+      alias: isDesktop
+        ? [
             {
-              find: /\/constants\/firebase-config$/,
-              replacement: "/constants/firebase-config-live",
+              find: /^.*\/controllers\/ad-controller$/,
+              replacement: path.resolve(
+                __dirname,
+                "src/ts/desktop/stubs/ad-controller.ts",
+              ),
             },
-          ],
+            {
+              find: /^.*\/controllers\/analytics-controller$/,
+              replacement: path.resolve(
+                __dirname,
+                "src/ts/desktop/stubs/analytics-controller.ts",
+              ),
+            },
+            {
+              find: /^.*\/legacy-states\/connection$/,
+              replacement: path.resolve(
+                __dirname,
+                "src/ts/desktop/stubs/connection.ts",
+              ),
+            },
+            {
+              find: /^.*\/firebase$/,
+              replacement: path.resolve(
+                __dirname,
+                "src/ts/desktop/stubs/firebase.ts",
+              ),
+            },
+            {
+              find: /^.*\/controllers\/route-controller$/,
+              replacement: path.resolve(
+                __dirname,
+                "src/ts/desktop/route-controller.ts",
+              ),
+            },
+            {
+              find: /^.*\/sentry$/,
+              replacement: path.resolve(
+                __dirname,
+                "src/ts/desktop/stubs/sentry.ts",
+              ),
+            },
+            {
+              find: /^.*\/popups\/video-ad-popup$/,
+              replacement: path.resolve(
+                __dirname,
+                "src/ts/desktop/stubs/video-ad-popup.ts",
+              ),
+            },
+            {
+              find: /^\.\.\/(poetry|wikipedia)$/,
+              replacement: path.resolve(
+                __dirname,
+                "src/ts/desktop/stubs/remote-text.ts",
+              ),
+            },
+          ]
+        : isDevelopment
+          ? []
+          : [
+              {
+                find: /\/constants\/firebase-config$/,
+                replacement: "/constants/firebase-config-live",
+              },
+            ],
     },
     clearScreen: false,
     root: "src",

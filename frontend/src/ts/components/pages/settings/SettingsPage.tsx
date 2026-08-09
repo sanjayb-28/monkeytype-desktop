@@ -1,4 +1,5 @@
 import { createResource, createSignal, JSXElement, Show } from "solid-js";
+import { envConfig } from "virtual:env-config";
 import { z } from "zod";
 
 import { resetConfig } from "../../../config/lifecycle";
@@ -80,6 +81,8 @@ export function SettingsPage(): JSXElement {
             <Show when={isAuthenticated()}>
               <Tags />
               <Presets />
+            </Show>
+            <Show when={isAuthenticated() || envConfig.isDesktop}>
               <SearchableAutoSetting key="resultSaving" />
             </Show>
             <SearchableAutoSetting key="difficulty" />
@@ -193,25 +196,27 @@ export function SettingsPage(): JSXElement {
           </Section>
           <Section title="danger zone">
             <ImportExport />
-            <SearchableAutoSetting key="ads" />
-            <SearchableSetting
-              key="cookies"
-              title="update cookie preferences"
-              description="If you changed your mind about which cookies you consent to, you can change your preferences here."
-              fa={{
-                icon: "fa-cookie-bite",
-              }}
-              inputs={
-                <Button
-                  class="w-full"
-                  onClick={() => {
-                    showModal("Cookies");
-                  }}
-                >
-                  open
-                </Button>
-              }
-            />
+            <Show when={!envConfig.isDesktop}>
+              <SearchableAutoSetting key="ads" />
+              <SearchableSetting
+                key="cookies"
+                title="update cookie preferences"
+                description="If you changed your mind about which cookies you consent to, you can change your preferences here."
+                fa={{
+                  icon: "fa-cookie-bite",
+                }}
+                inputs={
+                  <Button
+                    class="w-full"
+                    onClick={() => {
+                      showModal("Cookies");
+                    }}
+                  >
+                    open
+                  </Button>
+                }
+              />
+            </Show>
             <AnimationFpsLimit />
             <SearchableSetting
               key="resetSettings"
@@ -266,7 +271,7 @@ function AccountSettingsNotice(): JSXElement {
     fallback: false,
   });
   return (
-    <Show when={!dismissed()}>
+    <Show when={!envConfig.isDesktop && !dismissed()}>
       <div
         class={cn(
           "grid grid-cols-[auto_1fr] items-center gap-4 rounded px-4 py-4 ring-4 ring-sub-alt md:grid-cols-[auto_1fr_auto] md:gap-8",

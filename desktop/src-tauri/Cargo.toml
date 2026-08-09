@@ -1,0 +1,21 @@
+[package]
+name = "monkeytype-desktop"
+version = "0.3.0"
+description = "A local-only macOS port of Monkeytype"
+authors = ["Sanjay Baskaran"]
+edition = "2021"
+license = "GPL-3.0"
+
+[[bin]]
+name = "Monkeytype"
+path = "src/main.rs"
+
+[lib]
+name = "monkeytype_desktop_lib"
+crate-type = ["lib", "cdylib", "staticlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }

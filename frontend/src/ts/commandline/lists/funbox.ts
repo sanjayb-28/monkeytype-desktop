@@ -3,6 +3,9 @@ import * as TestLogic from "../../test/test-logic";
 import { getAllFunboxes, checkCompatibility } from "@monkeytype/funbox";
 import { Command, CommandsSubgroup } from "../types";
 import { getActiveFunboxNames } from "../../test/funbox/list";
+import { envConfig } from "virtual:env-config";
+
+const desktopUnsupportedFunboxes = new Set(["poetry", "wikipedia"]);
 
 const list: Command[] = [
   {
@@ -20,6 +23,9 @@ const list: Command[] = [
 ];
 
 for (const funbox of getAllFunboxes()) {
+  if (envConfig.isDesktop && desktopUnsupportedFunboxes.has(funbox.name)) {
+    continue;
+  }
   list.push({
     id: `changeFunbox${funbox.name}`,
     display: funbox.name.replace(/_/g, " "),

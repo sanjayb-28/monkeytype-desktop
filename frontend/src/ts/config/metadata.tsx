@@ -2,6 +2,7 @@ import { checkCompatibility } from "@monkeytype/funbox";
 import * as ConfigSchemas from "@monkeytype/schemas/configs";
 import { roundTo1 } from "@monkeytype/util/numbers";
 import { JSXElement } from "solid-js";
+import { envConfig } from "virtual:env-config";
 
 import * as CustomThemes from "../collections/custom-themes";
 import { getDefaultConfig } from "../constants/default-config";
@@ -297,8 +298,9 @@ export const configMetadata: ConfigMetadataObject = {
     displayString: "result saving",
     changeRequiresRestart: false,
     group: "behavior",
-    description:
-      'Set this setting to "off" in case you want to practice without saving new results to your account and affecting your statistics.',
+    description: envConfig.isDesktop
+      ? 'Set this setting to "off" to practice without saving new results to local activity or affecting your statistics.'
+      : 'Set this setting to "off" in case you want to practice without saving new results to your account and affecting your statistics.',
   },
   blindMode: {
     key: "blindMode",

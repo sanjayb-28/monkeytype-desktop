@@ -56,6 +56,7 @@ import { blurInputElement } from "../input/input-element";
 import * as ConnectionState from "../legacy-states/connection";
 import { qs, qsa } from "../utils/dom";
 import { getTheme } from "../states/theme";
+import { envConfig } from "virtual:env-config";
 import {
   getLastEventLog,
   getCurrentQuote,
@@ -967,7 +968,7 @@ export async function update(
   qs("#words")?.removeClass("blurred");
   blurInputElement();
   qs("#result .stats .time .bottom .afk")?.setText("");
-  if (isAuthenticated()) {
+  if (isAuthenticated() || envConfig.isDesktop) {
     qs("#result .loginTip")?.hide();
   } else {
     qs("#result .loginTip")?.show();
@@ -1041,7 +1042,7 @@ export async function update(
   } else {
     qsa("main #result .stats")?.show();
     qs("main #result .chart")?.show();
-    if (!isAuthenticated()) {
+    if (!isAuthenticated() && !envConfig.isDesktop) {
       qs("main #result .loginTip")?.show();
       qs("main #result #rateQuoteButton")?.hide();
       qs("main #result #reportQuoteButton")?.hide();

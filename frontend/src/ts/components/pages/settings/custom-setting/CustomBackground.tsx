@@ -4,6 +4,7 @@ import {
 } from "@monkeytype/schemas/configs";
 import { createForm } from "@tanstack/solid-form";
 import { createResource, JSXElement, For, Show } from "solid-js";
+import { envConfig } from "virtual:env-config";
 
 import {
   configMetadata,
@@ -62,13 +63,14 @@ export function CustomBackground(): JSXElement {
       extraSearchKeywords={getOptionSearchKeywords("customBackgroundSize")}
       description={
         <>
-          {configMetadata.customBackground.description}
+          {envConfig.isDesktop
+            ? "Choose a local image to use as the custom background. It stays on this Mac."
+            : configMetadata.customBackground.description}
           <br />
           <div class="mt-2 text-em-xs">
-            Note: The local image is stored in your browser&apos;s local storage
-            and will not be uploaded to the server. This means that if you clear
-            your browser&apos;s local storage or use a different browser, the
-            local image will be lost.
+            {envConfig.isDesktop
+              ? "Removing app data will also remove the local image."
+              : "Note: The local image is stored in your browser's local storage and will not be uploaded to the server. This means that if you clear your browser's local storage or use a different browser, the local image will be lost."}
           </div>
         </>
       }
@@ -128,10 +130,12 @@ export function CustomBackground(): JSXElement {
                 <Fa icon="fa-file-import" fixedWidth />
                 use local image
               </label>
-              <Separator text="or" />
+              <Show when={!envConfig.isDesktop}>
+                <Separator text="or" />
+              </Show>
             </>
           </Show>
-          <Show when={!hasLocalBackground()}>
+          <Show when={!envConfig.isDesktop && !hasLocalBackground()}>
             <form
               onSubmit={(e) => {
                 e.preventDefault();

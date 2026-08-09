@@ -1,0 +1,58 @@
+<head>
+  <link
+    rel="preload"
+    href="/webfonts/RobotoMono-Regular.woff2"
+    type="font/woff2"
+    as="font"
+    crossorigin
+  />
+  <link
+    rel="preload"
+    href="/webfonts/LexendDeca-Regular.woff2"
+    type="font/woff2"
+    as="font"
+    crossorigin
+  />
+  <script>
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape") event.preventDefault();
+    });
+  </script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta
+    name="description"
+    content="A minimal, customizable, local-only typing test for macOS."
+  />
+  <meta name="darkreader-lock" />
+  <title>Monkeytype</title>
+  <style>
+    :root {
+      --bg-color: #323437;
+      --main-color: #e2b714;
+      --caret-color: #e2b714;
+      --sub-color: #646669;
+      --sub-alt-color: #2c2e31;
+      --text-color: #d1d0c5;
+      --error-color: #ca4754;
+      --error-extra-color: #7e2a33;
+      --colorful-error-color: #ca4754;
+      --colorful-error-extra-color: #7e2a33;
+      --nav-focus-opacity: 0;
+    }
+    @layer normalize;
+    @layer theme;
+    @layer base;
+    @layer components;
+    @layer properties;
+    @layer vendor;
+    @layer custom-styles;
+    @layer hidden;
+    @layer utilities;
+  </style>
+  <link rel="icon" type="image/svg+xml" href="/images/favicon/favicon.svg" />
+  <link rel="stylesheet" href="styles/index.scss" />
+  <link rel="stylesheet" href="styles/tailwind.css" />
+  <link rel="stylesheet" href="styles/vendor.scss" />
+  <style class="customFont" type="text/css"></style>
+</head>

@@ -1,5 +1,6 @@
 import { checkCompatibility, getAllFunboxes } from "@monkeytype/funbox";
 import { For, JSXElement, type JSX } from "solid-js";
+import { envConfig } from "virtual:env-config";
 
 // import { canSetFunboxWithConfig } from "../../../../config/funbox-validation";
 import { configMetadata } from "../../../../config/metadata";
@@ -8,6 +9,8 @@ import { getConfig } from "../../../../config/store";
 import { getActiveFunboxNames } from "../../../../test/funbox/list";
 import { Button } from "../../../common/Button";
 import { SearchableSetting } from "../SearchableSetting";
+
+const desktopUnsupportedFunboxes = new Set(["poetry", "wikipedia"]);
 
 export function Funbox(): JSXElement {
   return (
@@ -18,7 +21,13 @@ export function Funbox(): JSXElement {
       fa={configMetadata.funbox.fa}
       fullWidthInputs={
         <div class="grid grid-cols-[repeat(auto-fit,minmax(13.5rem,1fr))] gap-2">
-          <For each={getAllFunboxes()}>
+          <For
+            each={getAllFunboxes().filter(
+              (funbox) =>
+                !envConfig.isDesktop ||
+                !desktopUnsupportedFunboxes.has(funbox.name),
+            )}
+          >
             {(funbox) => {
               const active = () => getConfig.funbox.includes(funbox.name);
 

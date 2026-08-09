@@ -17,6 +17,7 @@ import { promiseWithResolvers } from "../utils/misc";
 import { setConfig } from "./setters";
 import { deleteConfig } from "../ape/config";
 import { typedKeys } from "@monkeytype/util/objects";
+import { envConfig } from "virtual:env-config";
 
 export async function applyConfigFromJson(json: string): Promise<void> {
   try {
@@ -76,6 +77,13 @@ export async function applyConfig(
   //migrate old values if needed, remove additional keys and merge with default config
   const fullConfig: ConfigSchemas.Config = migrateConfig(partialConfig);
 
+  if (envConfig.isDesktop) {
+    fullConfig.funbox = fullConfig.funbox.filter(
+      (name) => name !== "poetry" && name !== "wikipedia",
+    );
+    fullConfig.customBackground = "";
+  }
+
   configEvent.dispatch({ key: "fullConfigChange" });
 
   const defaultConfig = getDefaultConfig();
@@ -113,7 +121,7 @@ export async function applyConfig(
 
 export async function resetConfig(): Promise<void> {
   await applyConfig(getDefaultConfig());
-  await deleteConfig();
+  if (!envConfig.isDesktop) await deleteConfig();
   saveFullConfigToLocalStorage(true);
 }
 

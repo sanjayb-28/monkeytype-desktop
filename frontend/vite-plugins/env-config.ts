@@ -11,6 +11,7 @@ function fallback(value: string | undefined | null, fallback: string): string {
 
 export function envConfig(options: {
   isDevelopment: boolean;
+  isDesktop: boolean;
   clientVersion: string;
   env: Record<string, string>;
 }): Plugin {
@@ -24,6 +25,7 @@ export function envConfig(options: {
       if (id === resolvedVirtualModuleId) {
         const devConfig: EnvConfig = {
           isDevelopment: true,
+          isDesktop: options.isDesktop,
           backendUrl: fallback(
             options.env["BACKEND_URL"],
             "http://localhost:5005",
@@ -36,10 +38,13 @@ export function envConfig(options: {
 
         const prodConfig: EnvConfig = {
           isDevelopment: false,
-          backendUrl: fallback(
-            options.env["BACKEND_URL"],
-            "https://api.monkeytype.com",
-          ),
+          isDesktop: options.isDesktop,
+          backendUrl: options.isDesktop
+            ? "tauri://localhost"
+            : fallback(
+                options.env["BACKEND_URL"],
+                "https://api.monkeytype.com",
+              ),
           recaptchaSiteKey: options.env["RECAPTCHA_SITE_KEY"] ?? "",
           quickLoginEmail: undefined,
           quickLoginPassword: undefined,

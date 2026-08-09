@@ -8,6 +8,7 @@ import { migrateConfig } from "./utils";
 import { LocalStorageWithSchema } from "../utils/local-storage-with-schema";
 import { isObject } from "../utils/misc";
 import { debounce } from "throttle-debounce";
+import { envConfig } from "virtual:env-config";
 
 let configToSend: Partial<ConfigSchemas.Config> = {};
 
@@ -31,6 +32,7 @@ export function saveToLocalStorage(
 ): void {
   if (nosave) return;
   configLS.set(Config);
+  if (envConfig.isDesktop) return;
   if (!noDbCheck) {
     //@ts-expect-error this is fine
     configToSend[key] = Config[key];
@@ -41,6 +43,7 @@ export function saveToLocalStorage(
 export function saveFullConfigToLocalStorage(noDbCheck = false): void {
   console.log("saving full config to localStorage");
   configLS.set(Config);
+  if (envConfig.isDesktop) return;
   if (!noDbCheck) {
     setAccountButtonSpinner(true);
     void saveConfig(Config).finally(() => {

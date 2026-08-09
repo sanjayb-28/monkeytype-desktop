@@ -5,7 +5,12 @@ import solidPlugin from "vite-plugin-solid";
 
 const plugins = [
   languageHashes({ skip: true }),
-  envConfig({ isDevelopment: true, clientVersion: "TESTING", env: {} }),
+  envConfig({
+    isDevelopment: true,
+    isDesktop: false,
+    clientVersion: "TESTING",
+    env: {},
+  }),
   solidPlugin({ hot: false }),
 ];
 

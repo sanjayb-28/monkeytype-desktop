@@ -1,0 +1,16 @@
+{
+  "name": "@monkeytype/desktop",
+  "version": "0.3.0",
+  "private": true,
+  "license": "GPL-3.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tauri dev",
+    "build": "tauri build --target aarch64-apple-darwin",
+    "check": "cargo check --manifest-path src-tauri/Cargo.toml --target aarch64-apple-darwin",
+    "tauri": "tauri"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "2.11.4"
+  }
+}

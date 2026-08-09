@@ -36,6 +36,8 @@ import { __nonReactive } from "./collections/tags";
 import { fetchUserFromApi } from "./ape/user";
 import { SnapshotInitError } from "./utils/snapshot-init-error";
 import { updateTagsInFilterStorage } from "./states/result-filters";
+import { envConfig } from "virtual:env-config";
+import { loadDesktopData, saveDesktopData } from "./desktop/storage";
 
 let dbSnapshot: Snapshot | undefined;
 const firstDayOfTheWeek = getFirstDayOfTheWeek();
@@ -74,11 +76,36 @@ export function setSnapshot(
   }
 
   setSolidSnapshot(newSnapshot);
+
+  if (envConfig.isDesktop && newSnapshot !== undefined) {
+    saveDesktopData({
+      personalBests: newSnapshot.personalBests,
+      typingStats: newSnapshot.typingStats,
+      xp: newSnapshot.xp,
+      streak: newSnapshot.streak,
+      maxStreak: newSnapshot.maxStreak,
+    });
+  }
 }
 
 export async function initSnapshot(): Promise<Snapshot | false> {
   //send api request with token that returns tags, presets, and data needed for snap
   const snap = getDefaultSnapshot();
+
+  if (envConfig.isDesktop) {
+    const local = loadDesktopData();
+    snap.name = "local";
+    snap.uid = "local";
+    snap.personalBests = local.personalBests;
+    snap.typingStats = local.typingStats;
+    snap.xp = local.xp;
+    snap.streak = local.streak;
+    snap.maxStreak = local.maxStreak;
+    dbSnapshot = snap;
+    setSolidSnapshot(snap);
+    return snap;
+  }
+
   await configurationPromise;
 
   try {
@@ -312,6 +339,9 @@ export function saveLocalResult(data: SaveLocalResultData): void {
   if (!snapshot) return;
 
   if (data.result !== undefined) {
+    if (envConfig.isDesktop) {
+      saveDesktopData({ appendResult: data.result });
+    }
     void insertLocalResult({ result: data.result });
     setLastResult(data.result);
     if (snapshot.testActivity !== undefined) {

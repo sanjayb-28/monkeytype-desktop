@@ -1,0 +1,6 @@
+body.desktop {
+  .advertisement,
+  [id^="ad-"] {
+    display: none !important;
+  }
+}

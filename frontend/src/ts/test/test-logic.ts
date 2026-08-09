@@ -100,6 +100,7 @@ import { debounce } from "throttle-debounce";
 import { qs } from "../utils/dom";
 import { setAccountButtonSpinner } from "../states/header";
 import { Config } from "../config/store";
+import { envConfig } from "virtual:env-config";
 import { setQuoteLengthAll, toggleFunbox, setConfig } from "../config/setters";
 import {
   resetTestEvents,
@@ -1040,8 +1041,33 @@ export async function finish(difficultyFailed = false): Promise<void> {
 
   let savingResultPromise: ReturnType<typeof saveResult> =
     Promise.resolve(null);
+  let desktopResult: DB.SaveLocalResultData | undefined;
   const user = getAuthenticatedUser();
-  if (user !== null) {
+  if (envConfig.isDesktop) {
+    if (!dontSave && Config.resultSaving) {
+      resetIncompleteTests();
+      const previousPb = DB.getLocalPB(
+        completedEvent.mode,
+        completedEvent.mode2,
+        completedEvent.punctuation,
+        completedEvent.numbers,
+        completedEvent.language,
+        completedEvent.difficulty,
+        completedEvent.lazyMode,
+        getFunbox(completedEvent.funbox),
+      );
+      const isPb =
+        completedEvent.mode !== "quote" &&
+        !completedEvent.bailedOut &&
+        (previousPb === undefined || completedEvent.wpm > previousPb.wpm);
+      const localResult = structuredClone(
+        completedEvent,
+      ) as unknown as SnapshotResult<Mode>;
+      localResult._id = crypto.randomUUID();
+      localResult.isPb = isPb;
+      desktopResult = { result: localResult, isPb };
+    }
+  } else if (user !== null) {
     // logged in
     if (dontSave) {
       void AnalyticsController.log("testCompletedInvalid");
@@ -1084,6 +1110,10 @@ export async function finish(difficultyFailed = false): Promise<void> {
   );
 
   await Promise.all([savingResultPromise, resultUpdatePromise]);
+  if (desktopResult !== undefined) {
+    DB.saveLocalResult(desktopResult);
+    if (desktopResult.isPb) Result.showCrown("normal");
+  }
 }
 
 async function saveResult(

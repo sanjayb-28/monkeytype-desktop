@@ -37,6 +37,7 @@ import {
   AccountSettingsUrlParamsSchema,
   readAccountSettingsGetParameters,
 } from "../states/account-settings";
+import { envConfig } from "virtual:env-config";
 
 type ChangeOptions = {
   force?: boolean;
@@ -78,6 +79,7 @@ const pages = {
   account: solidPage("account", {
     loadingOptions: {
       loadingMode: () => {
+        if (envConfig.isDesktop) return "none";
         if (isResultsReady()) {
           return "none";
         } else {
@@ -85,6 +87,7 @@ const pages = {
         }
       },
       loadingPromise: async () => {
+        if (envConfig.isDesktop) return;
         if (getSnapshot() === null || getSnapshot() === undefined) {
           throw new Error(
             "Looks like your account data didn't download correctly. Please refresh the page.<br>If this error persists, please contact support.",

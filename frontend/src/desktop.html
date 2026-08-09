@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <load src="html/desktop-head.html" />
+  <body class="loading desktop">
+    <load src="html/warnings.html" />
+    <mount data-component="theme"></mount>
+    <mount data-component="overlays"></mount>
+    <mount data-component="modals"></mount>
+    <div id="popups">
+      <load src="html/desktop-popups.html" />
+    </div>
+
+    <div id="app" class="content-grid focus hidden">
+      <mount data-component="header"></mount>
+      <main class="full-width content-grid" style="height: 100%">
+        <load src="html/pages/loading.html" />
+
+        <div class="page pageAbout hidden full-width" id="pageAbout">
+          <mount data-component="aboutpage"></mount>
+        </div>
+
+        <div class="page pageSettings hidden" id="pageSettings">
+          <mount data-component="settingspage"></mount>
+        </div>
+
+        <div class="page pageAccount hidden" id="pageAccount">
+          <mount data-component="accountpage"></mount>
+        </div>
+
+        <!-- Kept as inert route targets for the shared page-transition layer. -->
+        <div class="page pageLogin hidden" id="pageLogin"></div>
+        <div class="page pageProfile hidden" id="pageProfile"></div>
+        <div class="page pageProfileSearch hidden" id="pageProfileSearch"></div>
+        <div
+          class="page pageAccountSettings hidden"
+          id="pageAccountSettings"
+        ></div>
+        <div class="page pageFriends hidden" id="pageFriends"></div>
+        <div class="page pageLeaderboards hidden" id="pageLeaderboards"></div>
+
+        <load src="html/pages/test.html" />
+
+        <div class="page page404 hidden" id="page404">
+          <mount data-component="notfoundpage"></mount>
+        </div>
+      </main>
+      <mount data-component="footer"></mount>
+    </div>
+
+    <link rel="stylesheet" href="" id="globalFunBoxTheme" type="text/css" />
+    <script type="module" src="ts/desktop/index.ts"></script>
+  </body>
+</html>

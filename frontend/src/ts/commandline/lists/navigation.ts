@@ -5,6 +5,7 @@ import { Command, withValidation } from "../types";
 import { remoteValidation } from "../../utils/remote-validation";
 import { UserNameWithoutFilterSchema } from "@monkeytype/schemas/users";
 import Ape from "../../ape";
+import { envConfig } from "virtual:env-config";
 
 const commands: Command[] = [
   {
@@ -21,6 +22,7 @@ const commands: Command[] = [
     display: "View Leaderboards",
     alias: "navigate go to",
     icon: "fa-crown",
+    available: () => !envConfig.isDesktop,
     exec: (): void => {
       void navigate("/leaderboards");
     },
@@ -50,7 +52,11 @@ const commands: Command[] = [
     alias: "navigate go to stats",
     icon: "fa-user",
     exec: (): void => {
-      isAuthenticated() ? void navigate("/account") : void navigate("/login");
+      if (envConfig.isDesktop || isAuthenticated()) {
+        void navigate("/account");
+      } else {
+        void navigate("/login");
+      }
     },
   },
   withValidation({
@@ -58,6 +64,7 @@ const commands: Command[] = [
     display: "Search for a profile",
     alias: "profile user search find lookup",
     icon: "fa-search",
+    available: () => !envConfig.isDesktop,
     input: true,
     validation: {
       schema: UserNameWithoutFilterSchema,

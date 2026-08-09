@@ -36,6 +36,7 @@ import {
 } from "../components/layout/overlays/FpsCounter";
 import { applyConfigFromJson } from "../config/lifecycle";
 import { getLastEventLog } from "../states/test";
+import { envConfig } from "virtual:env-config";
 
 const adsCommands = buildCommands("ads");
 
@@ -85,8 +86,8 @@ export const commands: CommandsSubgroup = {
     },
 
     //account
-    ...TagsCommands,
-    ...PresetsCommands,
+    ...(envConfig.isDesktop ? [] : TagsCommands),
+    ...(envConfig.isDesktop ? [] : PresetsCommands),
 
     //behavior
     ...buildCommands(
@@ -207,7 +208,7 @@ export const commands: CommandsSubgroup = {
     ),
 
     //danger zone
-    ...adsCommands,
+    ...(envConfig.isDesktop ? [] : adsCommands),
 
     //other
     ...LoadChallengeCommands,
@@ -217,8 +218,9 @@ export const commands: CommandsSubgroup = {
       display: "Watch video ad",
       alias: "support donate",
       icon: "fa-ad",
+      available: () => !envConfig.isDesktop,
       exec: (): void => {
-        void VideoAdPopup.show();
+        if (!envConfig.isDesktop) void VideoAdPopup.show();
       },
     },
     {
@@ -345,6 +347,7 @@ export const commands: CommandsSubgroup = {
       id: "joinDiscord",
       display: "Join the Discord server",
       icon: "fa-users",
+      visible: !envConfig.isDesktop,
       exec: (): void => {
         window.open("https://discord.gg/monkeytype");
       },

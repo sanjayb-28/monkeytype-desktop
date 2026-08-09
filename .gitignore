@@ -133,3 +133,8 @@ frontend/static/webfonts-preview
 frontend/.env.sentry-build-plugin
 .claude/worktrees
 1024MiB
+
+# Desktop build output
+desktop/out/
+desktop/src-tauri/target/
+desktop/src-tauri/gen/
