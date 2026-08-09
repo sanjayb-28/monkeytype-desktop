@@ -10,10 +10,10 @@ permissions:
 
 on:
   pull_request:
-    branches: [master]
+    branches: [main]
     types: [opened, reopened, synchronize, ready_for_review]
   push:
-    branches: [master]
+    branches: [main]
 
 concurrency:
   group: group-${{ github.ref }}-${{ github.workflow }}
@@ -468,7 +468,7 @@ jobs:
     name: on-failure
     runs-on: ubuntu-latest
     needs: [ci-be, ci-fe, ci-assets, ci-pkg, ci-desktop, check-format]
-    if: ${{ always() && contains(needs.*.result, 'failure') && github.ref != 'refs/heads/master' }}
+    if: ${{ always() && contains(needs.*.result, 'failure') && github.ref != 'refs/heads/main' }}
     steps:
       - name: Save the PR number in an artifact
         shell: bash
