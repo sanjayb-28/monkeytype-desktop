@@ -354,6 +354,8 @@ function Trend(props: { results: SnapshotResult<Mode>[] }): JSXElement {
   const format = getFormatting;
 
   const trend = createMemo(() => {
+    if (props.results.length < 2) return undefined;
+
     const line = findLineByLeastSquares(
       props.results.map((it) => it.wpm).reverse(),
     );
@@ -363,8 +365,12 @@ function Trend(props: { results: SnapshotResult<Mode>[] }): JSXElement {
       .map((it) => it.timeTyping)
       .reduce((acc, it) => acc + it, 0);
 
+    if (totalSecondsFiltered <= 0) return undefined;
+
     const wpmChange = line[1][1] - line[0][1];
     const wpmChangePerHour = wpmChange * (3600 / totalSecondsFiltered);
+    if (!Number.isFinite(wpmChangePerHour)) return undefined;
+
     const plus = wpmChangePerHour > 0 ? "+" : "";
 
     return `Speed change per hour spent typing: ${plus}${format().typingSpeed(wpmChangePerHour, { showDecimalPlaces: true })} ${format().typingSpeedUnit}`;

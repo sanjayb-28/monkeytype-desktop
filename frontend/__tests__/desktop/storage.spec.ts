@@ -124,6 +124,22 @@ describe("desktop storage", () => {
     storage.close();
   });
 
+  it("retains results after the database is closed and reopened", async () => {
+    const databaseName = `monkeytype-desktop-test-${crypto.randomUUID()}`;
+    databaseNames.push(databaseName);
+    const firstSession = new DesktopStorage(databaseName, localStorage);
+    await firstSession.initialize();
+    await firstSession.save({ appendResult: result({ _id: "persisted" }) });
+    firstSession.close();
+
+    const reopenedSession = new DesktopStorage(databaseName, localStorage);
+    await reopenedSession.initialize();
+
+    expect(reopenedSession.load().results).toHaveLength(1);
+    expect(reopenedSession.load().results[0]?._id).toBe("persisted");
+    reopenedSession.close();
+  });
+
   it("rejects failed writes and continues processing later writes", async () => {
     const storage = createStorage();
     await storage.initialize();
