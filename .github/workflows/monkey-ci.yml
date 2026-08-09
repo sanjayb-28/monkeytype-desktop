@@ -1,483 +1,60 @@
-name: Monkey CI
-
-env:
-  PNPM_VERSION: "10.28.1"
-  NODE_VERSION: "24.11.0"
-  RECAPTCHA_SITE_KEY: "6Lc-V8McAAAAAJ7s6LGNe7MBZnRiwbsbiWts87aj"
-
-permissions:
-  contents: read
+name: Desktop CI
 
 on:
   pull_request:
     branches: [main]
-    types: [opened, reopened, synchronize, ready_for_review]
   push:
     branches: [main]
 
 concurrency:
-  group: group-${{ github.ref }}-${{ github.workflow }}
+  group: desktop-ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
-  pre-ci:
-    if: github.event.pull_request.draft == false || contains(github.event.pull_request.labels.*.name, 'force-ci') || contains(github.event.pull_request.labels.*.name, 'force-full-ci')
-    name: pre-ci
-    runs-on: ubuntu-latest
-    outputs:
-      should-build-be: ${{ steps.export-changes.outputs.should-build-be }}
-      should-build-fe: ${{ steps.export-changes.outputs.should-build-fe }}
-      should-build-pkg: ${{ steps.export-changes.outputs.should-build-pkg }}
-      should-build-desktop: ${{ steps.export-changes.outputs.should-build-desktop }}
-      assets-or-styles: ${{ steps.export-changes.outputs.assets-or-styles }}
-
-    steps:
-      - name: Full checkout
-        uses: actions/checkout@v6
-        # paths filter doesn't need checkout on pr
-        if: github.event_name != 'pull_request'
-
-      - name: Detect changes
-        uses: dorny/paths-filter@v4
-        id: filter
-        with:
-          filters: |
-            assets-or-styles:
-              - 'frontend/static/**/*'
-              - '**/*.{scss,css}'
-            be-src:
-              - 'backend/**/*'
-              - 'backend/package.json'
-            fe-src:
-              - 'frontend/**/*.{ts,tsx,js,scss,html}'
-              - 'frontend/**/package.json'
-            pkg-src:
-              - 'packages/**/*'
-            desktop-src:
-              - 'desktop/**/*'
-              - 'frontend/**/*.{ts,tsx,js,scss,html}'
-              - 'frontend/**/package.json'
-              - 'packages/**/*'
-            anti-cheat:
-              - 'backend/**/anticheat/**'
-
-      - name: Check Anti-cheat
-        if: steps.filter.outputs.anti-cheat == 'true' && !contains(github.event.pull_request.labels.*.name, 'force-ci') && !contains(github.event.pull_request.labels.*.name, 'force-full-ci')
-        run: exit 1
-
-      - name: Export changes
-        id: export-changes
-        run: |
-          echo "should-build-pkg=${{ steps.filter.outputs.pkg-src }}" >> $GITHUB_OUTPUT
-          echo "should-build-be=${{ steps.filter.outputs.be-src }}" >> $GITHUB_OUTPUT
-          echo "should-build-fe=${{ steps.filter.outputs.fe-src }}" >> $GITHUB_OUTPUT
-          echo "should-build-desktop=${{ steps.filter.outputs.desktop-src }}" >> $GITHUB_OUTPUT
-          echo "assets-or-styles=${{ steps.filter.outputs.assets-or-styles }}" >> $GITHUB_OUTPUT
-
-  prime-cache:
-    name: prime-cache
-    runs-on: ubuntu-latest
-    needs: [pre-ci]
-    if: github.event.pull_request.draft == false || contains(github.event.pull_request.labels.*.name, 'force-ci') || contains(github.event.pull_request.labels.*.name, 'force-full-ci')
-    steps:
-      - name: Checkout pnpm-lock
-        uses: actions/checkout@v6
-        with:
-          sparse-checkout: |
-            pnpm-lock.yaml
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Get pnpm store directory
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
-
-      - name: Cache node modules
-        id: cache-pnpm
-        uses: actions/cache@v5
-        env:
-          cache-name: node-modules
-        with:
-          path: ${{ env.STORE_PATH }}
-          key: ${{ runner.os }}-${{ env.NODE_VERSION }}-build-${{ env.cache-name }}-${{ hashFiles('pnpm-lock.yaml') }}
-          lookup-only: true
-
-      - if: ${{ steps.cache-pnpm.outputs.cache-hit != 'true' }}
-        name: Full checkout
-        uses: actions/checkout@v6
-
-      - if: ${{ steps.cache-pnpm.outputs.cache-hit != 'true' }}
-        name: Set up Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - if: ${{ steps.cache-pnpm.outputs.cache-hit != 'true' }}
-        name: Install dependencies
-        run: pnpm install
-
-  check-format:
-    name: check-format
-    needs: [prime-cache]
-    if: github.event.pull_request.draft == false || contains(github.event.pull_request.labels.*.name, 'force-ci') || contains(github.event.pull_request.labels.*.name, 'force-full-ci')
-    runs-on: ubuntu-latest
-    steps:
-      - name: Full checkout
-        uses: actions/checkout@v6
-
-      - name: Get changed files and write to temp
-        id: get-changed-files
-        uses: actions/github-script@v9
-        with:
-          script: |
-            const changedFiles = await github.paginate(
-              github.rest.pulls.listFiles,
-              {
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                pull_number: context.payload.pull_request.number,
-              }
-            );
-            const files = changedFiles.filter(file=> file.status !== "removed").map(file => file.filename);
-            if (files.length > 0) {
-              require('fs').writeFileSync('/tmp/changed-files.txt', files.join('\0'));
-              core.setOutput('has-files', 'true');
-            }
-
-      - name: Set up Node.js
-        if: steps.get-changed-files.outputs.has-files == 'true'
-        uses: actions/setup-node@v6
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Setup pnpm
-        if: steps.get-changed-files.outputs.has-files == 'true'
-        uses: pnpm/action-setup@v6
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Get pnpm store directory
-        if: steps.get-changed-files.outputs.has-files == 'true'
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
-
-      - name: Cache node modules
-        if: steps.get-changed-files.outputs.has-files == 'true'
-        id: cache-pnpm
-        uses: actions/cache@v5
-        env:
-          cache-name: node-modules
-        with:
-          path: ${{ env.STORE_PATH }}
-          key: ${{ runner.os }}-${{ env.NODE_VERSION }}-build-${{ env.cache-name }}-${{ hashFiles('pnpm-lock.yaml') }}
-
-      - name: Install dependencies
-        if: steps.get-changed-files.outputs.has-files == 'true'
-        run: pnpm install
-
-      - name: Check formatting (changed files)
-        if: steps.get-changed-files.outputs.has-files == 'true'
-        run: |
-          xargs -0 pnpm oxfmt --check --no-error-on-unmatched-pattern < /tmp/changed-files.txt
-
-  ci-be:
-    name: ci-be
-    needs: [pre-ci, prime-cache]
-    runs-on: ubuntu-latest
-    if: needs.pre-ci.outputs.should-build-be == 'true' || needs.pre-ci.outputs.should-build-pkg == 'true' || contains(github.event.pull_request.labels.*.name, 'force-full-ci')
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          sparse-checkout: |
-            backend
-            packages
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Get pnpm store directory
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
-
-      - name: Cache node modules
-        id: cache-pnpm
-        uses: actions/cache@v5
-        env:
-          cache-name: node-modules
-        with:
-          path: ${{ env.STORE_PATH }}
-          key: ${{ runner.os }}-${{ env.NODE_VERSION }}-build-${{ env.cache-name }}-${{ hashFiles('pnpm-lock.yaml') }}
-
-      - name: Install dependencies
-        run: pnpm install
-
-      - name: Check lint
-        run: npm run lint-fast-be && npm run lint-be
-
-      - name: Build
-        run: npm run build-be
-
-      - name: Test
-        run: npm run test-be
-
-  ci-fe:
-    name: ci-fe
-    needs: [pre-ci, prime-cache]
-    runs-on: ubuntu-latest
-    if: needs.pre-ci.outputs.should-build-fe == 'true' || needs.pre-ci.outputs.should-build-pkg == 'true' || contains(github.event.pull_request.labels.*.name, 'force-full-ci')
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          sparse-checkout: |
-            frontend
-            packages
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Create stub firebase config
-        working-directory: ./frontend/src/ts/constants
-        run: mv ./firebase-config-example.ts ./firebase-config.ts && cp ./firebase-config.ts ./firebase-config-live.ts
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Get pnpm store directory
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
-
-      - name: Cache node modules
-        id: cache-pnpm
-        uses: actions/cache@v5
-        env:
-          cache-name: node-modules
-        with:
-          path: ${{ env.STORE_PATH }}
-          key: ${{ runner.os }}-${{ env.NODE_VERSION }}-build-${{ env.cache-name }}-${{ hashFiles('pnpm-lock.yaml') }}
-
-      - name: Install dependencies
-        run: pnpm install
-
-      - name: Check lint
-        run: npm run lint-fast-fe && npm run lint-fe
-
-      - name: Build
-        run: npm run build-fe
-
-      - name: Test
-        run: npm run test-fe
-
-  ci-assets:
-    name: ci-assets
-    needs: [pre-ci, prime-cache]
-    runs-on: ubuntu-latest
-    if: needs.pre-ci.outputs.assets-or-styles == 'true' || needs.pre-ci.outputs.should-build-pkg == 'true' || contains(github.event.pull_request.labels.*.name, 'force-full-ci')
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          sparse-checkout: |
-            frontend
-            packages
-
-      - uses: dorny/paths-filter@v4
-        id: filter
-        with:
-          filters: |
-            styles:
-              - '**/*.{scss,css}'
-            json:
-              - 'frontend/static/**/*.json'
-            languages:
-              - 'frontend/static/languages/**'
-            quotes:
-              - 'frontend/static/quotes/**'
-            others:
-              - 'frontend/static/layouts/**'
-              - 'frontend/static/themes/**'
-              - 'frontend/static/webfonts/**'
-              - 'frontend/static/challenges/**'
-              - 'frontend/static/sounds/**'
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Get pnpm store directory
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
-
-      - name: Cache node modules
-        id: cache-pnpm
-        uses: actions/cache@v5
-        env:
-          cache-name: node-modules
-        with:
-          path: ${{ env.STORE_PATH }}
-          key: ${{ runner.os }}-${{ env.NODE_VERSION }}-build-${{ env.cache-name }}-${{ hashFiles('pnpm-lock.yaml') }}
-
-      - name: Install dependencies
-        run: pnpm install
-
-      - name: Lint styles
-        if: steps.filter.outputs.styles == 'true'
-        run: npm run lint-styles
-
-      - name: Lint JSON
-        if: steps.filter.outputs.json == 'true'
-        run: npm run lint-json-assets
-
-      - name: Validate language assets
-        if: steps.filter.outputs.languages == 'true' || needs.pre-ci.outputs.should-build-pkg == 'true'
-        run: npm run check-assets-languages
-
-      - name: Validate quote assets
-        if: steps.filter.outputs.quotes == 'true'
-        run: npm run check-assets-quotes
-
-      - name: Validate other assets
-        if: steps.filter.outputs.others == 'true' || needs.pre-ci.outputs.should-build-pkg == 'true'
-        run: npm run check-assets-others
-
-  ci-pkg:
-    name: ci-pkg
-    needs: [pre-ci, prime-cache]
-    runs-on: ubuntu-latest
-    if: needs.pre-ci.outputs.should-build-pkg == 'true' || contains(github.event.pull_request.labels.*.name, 'force-full-ci')
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          sparse-checkout: |
-            packages
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Get pnpm store directory
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
-
-      - name: Cache node modules
-        id: cache-pnpm
-        uses: actions/cache@v5
-        env:
-          cache-name: node-modules
-        with:
-          path: ${{ env.STORE_PATH }}
-          key: ${{ runner.os }}-${{ env.NODE_VERSION }}-build-${{ env.cache-name }}-${{ hashFiles('pnpm-lock.yaml') }}
-
-      - name: Install dependencies
-        run: pnpm install
-
-      - name: Check lint
-        run: npm run lint-fast-pkg && npm run lint-pkg
-
-      - name: Build
-        run: npm run build-pkg
-
-      - name: Test
-        run: npm run test-pkg
-
-  ci-desktop:
-    name: ci-desktop-macos-arm64
-    needs: [pre-ci, prime-cache]
+  verify:
+    name: Apple Silicon desktop
     runs-on: macos-15
-    if: needs.pre-ci.outputs.should-build-desktop == 'true' || contains(github.event.pull_request.labels.*.name, 'force-full-ci')
     steps:
       - uses: actions/checkout@v6
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
+      - uses: pnpm/action-setup@v6
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          version: 10.28.1
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
         with:
-          version: ${{ env.PNPM_VERSION }}
+          node-version: 24.11.0
+          cache: pnpm
 
-      - name: Create stub Firebase config
-        working-directory: ./frontend/src/ts/constants
-        run: mv ./firebase-config-example.ts ./firebase-config.ts && cp ./firebase-config.ts ./firebase-config-live.ts
+      - name: Prepare frontend config
+        working-directory: frontend/src/ts/constants
+        run: mv firebase-config-example.ts firebase-config.ts && cp firebase-config.ts firebase-config-live.ts
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Test desktop frontend
-        run: pnpm --dir frontend exec vitest run __tests__/desktop
+      - name: Build workspace packages
+        run: pnpm run build-pkg
 
-      - name: Lint desktop frontend
-        run: pnpm --dir frontend exec oxlint --type-aware --type-check --format agent src/ts/desktop
+      - name: Verify desktop frontend
+        run: |
+          pnpm --dir frontend exec vitest run __tests__/desktop
+          pnpm --dir frontend exec oxlint --type-aware --type-check --format agent src/ts/desktop
 
-      - name: Test and lint native shell
+      - name: Verify native shell
         run: |
           cargo test --manifest-path desktop/src-tauri/Cargo.toml --target aarch64-apple-darwin
           cargo clippy --manifest-path desktop/src-tauri/Cargo.toml --target aarch64-apple-darwin -- -D warnings
 
-      - name: Build Apple Silicon app and DMG
+      - name: Build Apple Silicon app
         run: pnpm --dir desktop build
 
-      - name: Verify architecture, signature, and offline policy
+      - name: Verify bundle
         run: |
           APP_PATH="desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/macos/Monkeytype.app"
-          file "$APP_PATH/Contents/MacOS/Monkeytype" | grep -q 'arm64'
+          file "$APP_PATH/Contents/MacOS/Monkeytype" | grep -q arm64
           codesign --verify --deep --strict --verbose=2 "$APP_PATH"
           grep -q 'connect-src.*ipc:.*http://ipc.localhost' desktop/src-tauri/tauri.conf.json
-
-      - name: Upload unsigned desktop artifacts
-        uses: actions/upload-artifact@v7
-        with:
-          name: monkeytype-desktop-macos-arm64
-          path: |
-            desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/macos/Monkeytype.app
-            desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
-
-  on-failure:
-    name: on-failure
-    runs-on: ubuntu-latest
-    needs: [ci-be, ci-fe, ci-assets, ci-pkg, ci-desktop, check-format]
-    if: ${{ always() && contains(needs.*.result, 'failure') && github.ref != 'refs/heads/main' }}
-    steps:
-      - name: Save the PR number in an artifact
-        shell: bash
-        env:
-          PR_NUM: ${{ github.event.number }}
-        run: echo $PR_NUM > pr_num.txt
-
-      - name: Upload the PR number
-        uses: actions/upload-artifact@v7
-        with:
-          name: pr_num
-          path: ./pr_num.txt
