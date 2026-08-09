@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Monkeytype",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "identifier": "com.monkeytype.desktop",
   "build": {
     "beforeDevCommand": "MONKEYTYPE_DESKTOP=true pnpm --dir .. dev-fe",
@@ -16,11 +16,12 @@
         "url": "desktop.html",
         "title": "Monkeytype",
         "width": 1200,
-        "height": 800,
-        "maximized": true,
+        "height": 720,
+        "maximized": false,
         "minWidth": 800,
         "minHeight": 600,
         "center": true,
+        "visible": false,
         "resizable": true,
         "fullscreen": false,
         "hiddenTitle": true,

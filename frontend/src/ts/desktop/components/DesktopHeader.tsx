@@ -16,9 +16,13 @@ export function DesktopHeader(): JSXElement {
         "opacity-0": getIsScreenshotting(),
       })}
       data-ui-element="header"
+      data-tauri-drag-region
     >
       <Logo />
-      <nav class="z-5 flex w-full items-center gap-1 md:gap-2">
+      <nav
+        class="z-5 flex w-full items-center gap-1 md:gap-2"
+        data-tauri-drag-region
+      >
         <Button
           variant="text"
           fa={{ icon: "fa-keyboard", fixedWidth: true }}
@@ -58,7 +62,7 @@ export function DesktopHeader(): JSXElement {
           active={getActivePage() === "settings"}
           balloon={{ text: "settings", position: "down" }}
         />
-        <div class="grow"></div>
+        <div class="grow" data-tauri-drag-region></div>
         <div class="px-2 text-em-xs text-sub">offline</div>
       </nav>
     </header>
