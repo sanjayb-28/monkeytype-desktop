@@ -441,7 +441,22 @@ export class DesktopStorage {
   }
 
   async clear(): Promise<void> {
-    return this.replace(defaultDesktopData());
+    return this.enqueue(async () => {
+      const database = await this.dbPromise;
+      const empty = defaultDesktopData();
+      const next: DesktopData = {
+        ...this.cache,
+        personalBests: empty.personalBests,
+        results: [],
+        typingStats: empty.typingStats,
+        xp: 0,
+        streak: 0,
+        maxStreak: 0,
+      };
+      await this.replaceImmediately(database, next);
+      this.cache = next;
+      dispatchUpdatedEvent();
+    });
   }
 
   close(): void {

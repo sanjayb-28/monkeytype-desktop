@@ -1,5 +1,14 @@
 use std::fs;
-use tauri::Manager;
+
+#[tauri::command]
+fn show_main_window(window: tauri::WebviewWindow) -> Result<(), String> {
+    window
+        .maximize()
+        .map_err(|error| format!("Failed to maximize main window: {error}"))?;
+    window
+        .show()
+        .map_err(|error| format!("Failed to show main window: {error}"))
+}
 
 fn valid_suggested_name(name: &str) -> bool {
     !name.is_empty()
@@ -50,15 +59,11 @@ async fn open_text_file() -> Result<Option<String>, String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![save_text_file, open_text_file])
-        .setup(|app| {
-            let window = app.get_webview_window("main").ok_or_else(|| {
-                std::io::Error::new(std::io::ErrorKind::NotFound, "main window not found")
-            })?;
-            window.show()?;
-            window.maximize()?;
-            Ok(())
-        })
+        .invoke_handler(tauri::generate_handler![
+            save_text_file,
+            open_text_file,
+            show_main_window
+        ])
         .run(tauri::generate_context!())
         .expect("failed to run Monkeytype Desktop");
 }
