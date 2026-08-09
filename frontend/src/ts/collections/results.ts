@@ -798,6 +798,11 @@ export async function waitForResultsReady(): Promise<void> {
   await resultsCollection.stateWhenReady();
 }
 
+export async function refreshDesktopResults(): Promise<void> {
+  setLastResult(undefined);
+  await resultsCollection.utils.refetch();
+}
+
 /**
  *
  */

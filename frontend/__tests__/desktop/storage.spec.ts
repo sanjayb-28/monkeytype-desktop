@@ -312,4 +312,77 @@ describe("desktop storage", () => {
     expect(storage.load().personalBests.words["10"]?.[0]?.wpm).toBe(80);
     storage.close();
   });
+
+  it("clears typing history to zero without removing local collections", async () => {
+    const databaseName = `monkeytype-desktop-test-${crypto.randomUUID()}`;
+    databaseNames.push(databaseName);
+    const storage = new DesktopStorage(databaseName, localStorage);
+    await storage.initialize();
+    const data = defaultDesktopData();
+    data.customThemes = [
+      {
+        _id: "local_theme",
+        name: "night_shift",
+        colors: [
+          "#111111",
+          "#222222",
+          "#333333",
+          "#444444",
+          "#555555",
+          "#666666",
+          "#777777",
+          "#888888",
+          "#999999",
+          "#aaaaaa",
+        ],
+      },
+    ];
+    data.favoriteQuotes = { english: ["42"] };
+    data.presets = [{ _id: "local_preset", name: "short sprint", config: {} }];
+    data.results = [result({ _id: "cleared-result", isPb: true })];
+    data.personalBests.words["10"] = [
+      {
+        acc: 98,
+        consistency: 90,
+        difficulty: "normal",
+        language: "english",
+        lazyMode: false,
+        numbers: false,
+        punctuation: false,
+        raw: 84,
+        timestamp: now,
+        wpm: 80,
+      },
+    ];
+    data.typingStats = {
+      completedTests: 1,
+      startedTests: 2,
+      timeTyping: 10,
+    };
+    data.xp = 45;
+    data.streak = 2;
+    data.maxStreak = 3;
+    await storage.replace(data);
+
+    await storage.clear();
+
+    const cleared = storage.load();
+    expect(cleared).toMatchObject({
+      results: [],
+      typingStats: { completedTests: 0, startedTests: 0, timeTyping: 0 },
+      xp: 0,
+      streak: 0,
+      maxStreak: 0,
+      favoriteQuotes: { english: ["42"] },
+      presets: [{ _id: "local_preset", name: "short sprint" }],
+      customThemes: [{ _id: "local_theme", name: "night_shift" }],
+    });
+    expect(cleared.personalBests).toEqual(defaultDesktopData().personalBests);
+    storage.close();
+
+    const reopened = new DesktopStorage(databaseName, localStorage);
+    await reopened.initialize();
+    expect(reopened.load()).toEqual(cleared);
+    reopened.close();
+  });
 });

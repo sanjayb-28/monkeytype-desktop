@@ -13,6 +13,7 @@ import type { SnapshotResult } from "../../constants/default-snapshot";
 
 import {
   createResultsQueryState,
+  refreshDesktopResults,
   useResultsLiveQuery,
 } from "../../collections/results";
 import AsyncContent from "../../components/common/AsyncContent";
@@ -23,6 +24,7 @@ import { Filters } from "../../components/pages/account/Filters";
 import { Table } from "../../components/pages/account/Table";
 import { TestStats } from "../../components/pages/account/TestStats";
 import { UserProfile } from "../../components/pages/profile/UserProfile";
+import * as DB from "../../db";
 import {
   showErrorNotification,
   showSuccessNotification,
@@ -38,6 +40,7 @@ import {
 } from "../backup";
 import { filterDashboardResults, resultsToCsv } from "../dashboard";
 import { openTextFile, saveTextFile } from "../native-files";
+import { reloadDesktopApp } from "../native-window";
 import { clearDesktopData, loadDesktopData } from "../storage";
 
 export function DesktopAccountPage(): JSXElement {
@@ -129,7 +132,7 @@ export function DesktopAccountPage(): JSXElement {
           return {
             status: "success",
             message: "Backup restored",
-            afterHide: () => window.location.reload(),
+            afterHide: reloadDesktopApp,
           };
         },
       });
@@ -145,10 +148,10 @@ export function DesktopAccountPage(): JSXElement {
       buttonText: "clear",
       execFn: async () => {
         await clearDesktopData();
+        await Promise.all([DB.initSnapshot(), refreshDesktopResults()]);
         return {
           status: "success",
           message: "Local typing data cleared",
-          afterHide: () => window.location.reload(),
         };
       },
     });
