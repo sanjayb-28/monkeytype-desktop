@@ -1,8 +1,12 @@
-import { render } from "@solidjs/testing-library";
+import { fireEvent, render } from "@solidjs/testing-library";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { AnimatedModal } from "../../../src/ts/components/common/AnimatedModal";
-import { hideModal, showModal } from "../../../src/ts/states/modals";
+import {
+  hideModal,
+  isModalOpen,
+  showModal,
+} from "../../../src/ts/states/modals";
 
 describe("AnimatedModal", () => {
   beforeEach(() => {
@@ -76,6 +80,16 @@ describe("AnimatedModal", () => {
     const { dialog } = renderModal({});
 
     expect(dialog.onmousedown).toBeDefined();
+  });
+
+  it("handles the native dialog cancel event", () => {
+    const { dialog } = renderModal({});
+    const cancelEvent = new Event("cancel", { cancelable: true });
+
+    fireEvent(dialog, cancelEvent);
+
+    expect(cancelEvent.defaultPrevented).toBe(true);
+    expect(isModalOpen("Support")).toBe(false);
   });
 
   it("applies custom class to dialog", () => {

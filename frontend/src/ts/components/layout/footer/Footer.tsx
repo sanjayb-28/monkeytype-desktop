@@ -1,4 +1,5 @@
-import { JSXElement } from "solid-js";
+import { JSXElement, Show } from "solid-js";
+import { envConfig } from "virtual:env-config";
 
 import { getIsScreenshotting } from "../../../states/core";
 import { showModal } from "../../../states/modals";
@@ -10,6 +11,14 @@ import { ThemeIndicator } from "./ThemeIndicator";
 import { VersionButton } from "./VersionButton";
 
 export function Footer(): JSXElement {
+  return (
+    <Show when={envConfig.isDesktop} fallback={<WebFooter />}>
+      <DesktopFooter />
+    </Show>
+  );
+}
+
+function WebFooter(): JSXElement {
   return (
     <footer
       class={cn("relative text-xs text-sub", {
@@ -104,6 +113,26 @@ export function Footer(): JSXElement {
           <ThemeIndicator />
           <VersionButton />
         </div>
+      </div>
+    </footer>
+  );
+}
+
+function DesktopFooter(): JSXElement {
+  return (
+    <footer
+      class={cn("relative text-xs text-sub", {
+        "opacity-0": getIsScreenshotting(),
+      })}
+    >
+      <Keytips />
+      <div
+        class={cn("flex justify-between transition-opacity", {
+          "opacity-0": getFocus(),
+        })}
+      >
+        <span>local-only macOS app</span>
+        <ThemeIndicator />
       </div>
     </footer>
   );

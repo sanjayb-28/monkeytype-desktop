@@ -1,6 +1,7 @@
 import { CustomTheme, CustomThemeNameSchema } from "@monkeytype/schemas/users";
 import { For, JSXElement, Show, untrack } from "solid-js";
 import { debounce } from "throttle-debounce";
+import { envConfig } from "virtual:env-config";
 import { z } from "zod";
 
 import {
@@ -82,7 +83,7 @@ export function Theme(): JSXElement {
 
   const Customs = () => (
     <div class="grid gap-4">
-      <Show when={isAuthenticated()}>
+      <Show when={isAuthenticated() || envConfig.isDesktop}>
         <div class="grid grid-cols-[repeat(auto-fill,minmax(17rem,1fr))] gap-2">
           <For each={customThemes()}>
             {(theme) => <CustomThemeButton theme={theme} />}
@@ -120,86 +121,88 @@ export function Theme(): JSXElement {
             }
           }}
         />
-        <Button
-          text="share"
-          onClick={() => {
-            showSimpleModal({
-              title: "Share custom theme",
-              schema: z.object({ includeBackground: z.boolean().optional() }),
-              inputs: {
-                includeBackground: {
-                  label: "Include background link, size and filters",
-                  type: "checkbox",
+        <Show when={!envConfig.isDesktop}>
+          <Button
+            text="share"
+            onClick={() => {
+              showSimpleModal({
+                title: "Share custom theme",
+                schema: z.object({ includeBackground: z.boolean().optional() }),
+                inputs: {
+                  includeBackground: {
+                    label: "Include background link, size and filters",
+                    type: "checkbox",
+                  },
                 },
-              },
-              buttonText: "copy link to clipboard",
-              buttonAlwaysEnabled: true,
-              execFn: async ({ includeBackground }) => {
-                const newTheme: {
-                  c: string[]; //colors
-                  i?: string; //image
-                  s?: string; //size
-                  f?: object; //filter
-                } = {
-                  c: convertThemeToCustomColors(getTheme()),
-                };
+                buttonText: "copy link to clipboard",
+                buttonAlwaysEnabled: true,
+                execFn: async ({ includeBackground }) => {
+                  const newTheme: {
+                    c: string[]; //colors
+                    i?: string; //image
+                    s?: string; //size
+                    f?: object; //filter
+                  } = {
+                    c: convertThemeToCustomColors(getTheme()),
+                  };
 
-                if (includeBackground) {
-                  newTheme.i = getConfig.customBackground;
-                  newTheme.s = getConfig.customBackgroundSize;
-                  newTheme.f = getConfig.customBackgroundFilter;
-                }
+                  if (includeBackground) {
+                    newTheme.i = getConfig.customBackground;
+                    newTheme.s = getConfig.customBackgroundSize;
+                    newTheme.f = getConfig.customBackgroundFilter;
+                  }
 
-                const link = `${window.location.origin}?customTheme=${btoa(
-                  JSON.stringify(newTheme),
-                )}`;
+                  const link = `${window.location.origin}?customTheme=${btoa(
+                    JSON.stringify(newTheme),
+                  )}`;
 
-                try {
-                  await navigator.clipboard.writeText(link);
-                  showSuccessNotification("URL Copied to clipboard");
-                } catch (e) {
-                  showNoticeNotification(
-                    "Looks like we couldn't copy the link straight to your clipboard. Please copy it manually.",
-                    {
-                      durationMs: 5000,
-                    },
-                  );
+                  try {
+                    await navigator.clipboard.writeText(link);
+                    showSuccessNotification("URL Copied to clipboard");
+                  } catch (e) {
+                    showNoticeNotification(
+                      "Looks like we couldn't copy the link straight to your clipboard. Please copy it manually.",
+                      {
+                        durationMs: 5000,
+                      },
+                    );
 
-                  setTimeout(() => {
-                    showSimpleModal({
-                      title: "Custom theme URL",
-                      class: "max-w-2xl",
-                      schema: z.object({ url: z.string() }),
-                      inputs: {
-                        url: {
-                          type: "textarea",
-                          placeholder: "URL",
-                          initVal: link,
-                          clickToSelect: true,
-                          readOnly: true,
-                          class: "h-50",
+                    setTimeout(() => {
+                      showSimpleModal({
+                        title: "Custom theme URL",
+                        class: "max-w-2xl",
+                        schema: z.object({ url: z.string() }),
+                        inputs: {
+                          url: {
+                            type: "textarea",
+                            placeholder: "URL",
+                            initVal: link,
+                            clickToSelect: true,
+                            readOnly: true,
+                            class: "h-50",
+                          },
                         },
-                      },
-                      execFn: async () => {
-                        return {
-                          status: "success",
-                          showNotification: false,
-                        };
-                      },
-                    });
-                  }, 250);
-                  // this is flaky, no chaining for simple modals
-                }
+                        execFn: async () => {
+                          return {
+                            status: "success",
+                            showNotification: false,
+                          };
+                        },
+                      });
+                    }, 250);
+                    // this is flaky, no chaining for simple modals
+                  }
 
-                return {
-                  status: "success",
-                  showNotification: false,
-                };
-              },
-            });
-          }}
-        />
-        <Show when={isAuthenticated()}>
+                  return {
+                    status: "success",
+                    showNotification: false,
+                  };
+                },
+              });
+            }}
+          />
+        </Show>
+        <Show when={isAuthenticated() || envConfig.isDesktop}>
           <Button
             text="save as new"
             onClick={() => {
@@ -225,7 +228,7 @@ export function Theme(): JSXElement {
             }}
           />
         </Show>
-        <Show when={!isAuthenticated()}>
+        <Show when={!isAuthenticated() && !envConfig.isDesktop}>
           <Button
             text="save"
             onClick={() => {

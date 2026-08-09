@@ -5,6 +5,7 @@ import type {
 import type { Mode } from "@monkeytype/schemas/shared";
 
 import { For, JSXElement, Show } from "solid-js";
+import { envConfig } from "virtual:env-config";
 
 import { setConfig, setQuoteLengthAll } from "../../config/setters";
 import { getConfig } from "../../config/store";
@@ -188,7 +189,13 @@ export function MobileTestConfigModal(): JSXElement {
           <Show when={getConfig.mode === "quote"}>
             <For each={quoteLengths}>
               {(ql) => (
-                <Show when={!("loginRequired" in ql) || isAuthenticated()}>
+                <Show
+                  when={
+                    !("loginRequired" in ql) ||
+                    isAuthenticated() ||
+                    envConfig.isDesktop
+                  }
+                >
                   <MCButton
                     text={ql.label}
                     active={isQuoteLengthActive(ql.value)}
@@ -206,9 +213,14 @@ export function MobileTestConfigModal(): JSXElement {
         <Separator />
       </Show>
 
-      <div class="grid gap-2">
-        <MCButton text="share" onClick={() => showModal("ShareTestSettings")} />
-      </div>
+      <Show when={!envConfig.isDesktop}>
+        <div class="grid gap-2">
+          <MCButton
+            text="share"
+            onClick={() => showModal("ShareTestSettings")}
+          />
+        </div>
+      </Show>
     </AnimatedModal>
   );
 }

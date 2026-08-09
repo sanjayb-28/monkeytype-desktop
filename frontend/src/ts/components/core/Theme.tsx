@@ -1,5 +1,6 @@
 import { Link, Meta, MetaProvider, Style } from "@solidjs/meta";
 import { createEffect, createMemo, JSXElement, Show } from "solid-js";
+import { envConfig } from "virtual:env-config";
 
 import { themes } from "../../constants/themes";
 import { createDebouncedEffectOn } from "../../hooks/effects";
@@ -37,7 +38,7 @@ export function Theme(): JSXElement {
   };
 
   createDebouncedEffectOn(125, getTheme, (colors) => {
-    styleEl()?.setHtml(`
+    const css = `
 :root {
     --bg-color: ${colors.bg};
     --main-color: ${colors.main};
@@ -49,7 +50,26 @@ export function Theme(): JSXElement {
     --error-extra-color: ${colors.errorExtra};
     --colorful-error-color: ${colors.colorfulError};
     --colorful-error-extra-color: ${colors.colorfulErrorExtra};
-}`);
+}`;
+
+    if (envConfig.isDesktop) {
+      const rootStyle = document.documentElement.style;
+      rootStyle.setProperty("--bg-color", colors.bg);
+      rootStyle.setProperty("--main-color", colors.main);
+      rootStyle.setProperty("--caret-color", colors.caret);
+      rootStyle.setProperty("--sub-color", colors.sub);
+      rootStyle.setProperty("--sub-alt-color", colors.subAlt);
+      rootStyle.setProperty("--text-color", colors.text);
+      rootStyle.setProperty("--error-color", colors.error);
+      rootStyle.setProperty("--error-extra-color", colors.errorExtra);
+      rootStyle.setProperty("--colorful-error-color", colors.colorfulError);
+      rootStyle.setProperty(
+        "--colorful-error-extra-color",
+        colors.colorfulErrorExtra,
+      );
+    } else {
+      styleEl()?.setHtml(css);
+    }
   });
 
   const isThemeWithCss = () => {
@@ -69,13 +89,39 @@ export function Theme(): JSXElement {
     } else {
       hideLoaderBar();
     }
-    linkEl()?.setAttribute("href", hasCss ? `/themes/${name}.css` : "");
+    if (envConfig.isDesktop) {
+      const existing =
+        document.head.querySelector<HTMLLinkElement>("#currentTheme");
+      if (!hasCss) {
+        existing?.remove();
+        hideLoaderBar();
+      } else {
+        const link = existing ?? document.createElement("link");
+        link.id = "currentTheme";
+        link.rel = "stylesheet";
+        if (existing === null) {
+          link.addEventListener("load", onLoad);
+          link.addEventListener("error", onError);
+        }
+        link.dataset["name"] = name;
+        link.href = `/themes/${name}.css`;
+        if (existing === null) document.head.append(link);
+      }
+
+      const meta =
+        document.head.querySelector<HTMLMetaElement>("#metaThemeColor");
+      meta?.setAttribute("content", getTheme().bg);
+    } else {
+      linkEl()?.setAttribute("href", hasCss ? `/themes/${name}.css` : "");
+    }
   });
 
   return (
     <MetaProvider>
-      <Style id="theme" ref={styleRef} />
-      <Show when={isThemeWithCss()}>
+      <Show when={!envConfig.isDesktop}>
+        <Style id="theme" ref={styleRef} />
+      </Show>
+      <Show when={!envConfig.isDesktop && isThemeWithCss()}>
         <Link
           ref={linkRef}
           rel="stylesheet"

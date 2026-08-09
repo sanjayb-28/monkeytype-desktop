@@ -102,6 +102,9 @@ import { setAccountButtonSpinner } from "../states/header";
 import { Config } from "../config/store";
 import { envConfig } from "virtual:env-config";
 import { normalizeResult } from "../desktop/result-normalization";
+import { getDesktopPersonalBestDecision } from "../desktop/personal-best";
+import { calculateDesktopProgression } from "../desktop/progression";
+import { loadDesktopData } from "../desktop/storage";
 import { setQuoteLengthAll, toggleFunbox, setConfig } from "../config/setters";
 import {
   resetTestEvents,
@@ -390,7 +393,11 @@ async function init(): Promise<boolean> {
   }
 
   if (Config.mode === "quote") {
-    if (Config.quoteLength.includes(-3) && !isAuthenticated()) {
+    if (
+      Config.quoteLength.includes(-3) &&
+      !isAuthenticated() &&
+      !envConfig.isDesktop
+    ) {
       setQuoteLengthAll();
     }
   }
@@ -1043,10 +1050,15 @@ export async function finish(difficultyFailed = false): Promise<void> {
   let savingResultPromise: ReturnType<typeof saveResult> =
     Promise.resolve(null);
   let desktopResult: DB.SaveLocalResultData | undefined;
+  let desktopShouldShowConfetti = false;
   const user = getAuthenticatedUser();
   if (envConfig.isDesktop) {
     if (!dontSave && Config.resultSaving) {
       resetIncompleteTests();
+      if (!completedEvent.bailedOut) {
+        const challenge = ChallengeContoller.verify(completedEvent);
+        if (challenge !== null) completedEvent.challenge = challenge;
+      }
       const previousPb = DB.getLocalPB(
         completedEvent.mode,
         completedEvent.mode2,
@@ -1057,17 +1069,22 @@ export async function finish(difficultyFailed = false): Promise<void> {
         completedEvent.lazyMode,
         getFunbox(completedEvent.funbox),
       );
-      const isPb =
-        completedEvent.mode !== "quote" &&
-        !completedEvent.bailedOut &&
-        (previousPb === undefined || completedEvent.wpm > previousPb.wpm);
+      const personalBest = getDesktopPersonalBestDecision(
+        completedEvent,
+        previousPb?.wpm,
+      );
       const localResult = normalizeResult({
         ...structuredClone(completedEvent),
         _id: crypto.randomUUID(),
-        isPb,
+        isPb: personalBest.isPersonalBest,
         name: "local",
       });
-      desktopResult = { result: localResult, isPb };
+      desktopResult = {
+        result: localResult,
+        isPb: personalBest.isPersonalBest,
+        ...calculateDesktopProgression(completedEvent, loadDesktopData()),
+      };
+      desktopShouldShowConfetti = personalBest.shouldCelebrate;
     }
   } else if (user !== null) {
     // logged in
@@ -1115,7 +1132,15 @@ export async function finish(difficultyFailed = false): Promise<void> {
   if (desktopResult !== undefined) {
     try {
       await DB.saveLocalResult(desktopResult);
-      if (desktopResult.isPb) Result.showCrown("normal");
+      qs("#result .stats .tags .editTagsButton")?.setAttribute(
+        "data-result-id",
+        desktopResult.result?._id ?? "",
+      );
+      qs("#result .stats .tags .editTagsButton")?.removeClass("invisible");
+      if (desktopResult.isPb) {
+        if (desktopShouldShowConfetti) Result.showConfetti();
+        Result.showCrown("normal");
+      }
     } catch (error) {
       showErrorNotification("Failed to save this result locally", { error });
     }

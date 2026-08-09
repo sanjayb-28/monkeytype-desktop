@@ -26,6 +26,7 @@ import { applyIdWorkaround, isTempId, tempId } from "./utils/misc";
 import { fetchUserFromApi } from "../ape/user";
 import { updateTagsInFilterStorage } from "../states/result-filters";
 import { isAuthenticated } from "../states/core";
+import { envConfig } from "virtual:env-config";
 
 export type TagItem = UserTag & { active: boolean };
 
@@ -33,15 +34,33 @@ const queryKeys = {
   root: () => [...baseKey("tags", { isUserSpecific: true })],
 };
 
+async function loadDesktopTags(): Promise<TagItem[]> {
+  const { initializeDesktopStorage, loadDesktopData } =
+    await import("../desktop/storage");
+  await initializeDesktopStorage();
+  return loadDesktopData().tags;
+}
+
+async function persistDesktopTags(): Promise<void> {
+  if (!envConfig.isDesktop) return;
+  const { saveDesktopData } = await import("../desktop/storage");
+  await saveDesktopData({ tags: getTags() });
+}
+
 const tagsCollection = createCollection(
   queryCollectionOptions({
     staleTime: Infinity,
     gcTime: Infinity, //remove when __nonReactive is removed
     queryKey: queryKeys.root(),
     queryClient,
-    enabled: isAuthenticated,
+    enabled: () => isAuthenticated() || envConfig.isDesktop,
     getKey: (it) => it._id,
     queryFn: async () => {
+      if (envConfig.isDesktop) {
+        const tags = await loadDesktopTags();
+        updateTagsInFilterStorage(tags.map((tag) => tag._id));
+        return tags;
+      }
       const activeIds = activeTagsLS.get();
       const userData = await fetchUserFromApi();
 
@@ -64,7 +83,7 @@ const tagsCollection = createCollection(
 // oxlint-disable-next-line typescript/explicit-function-return-type
 export function useTagsLiveQuery() {
   return useLiveQuery((q) => {
-    if (!isAuthenticated()) return undefined;
+    if (!isAuthenticated() && !envConfig.isDesktop) return undefined;
     return q
       .from({ tag: tagsCollection })
       .orderBy(({ tag }) => tag.name, "asc");
@@ -91,7 +110,7 @@ export async function getTagsOnce() {
 // oxlint-disable-next-line typescript/explicit-function-return-type
 export function useActiveTagsLiveQuery() {
   return useLiveQuery((q) => {
-    if (!isAuthenticated()) return undefined;
+    if (!isAuthenticated() && !envConfig.isDesktop) return undefined;
     return q
       .from({ tag: tagsCollection })
       .where(({ tag }) => eq(tag.active, true))
@@ -275,6 +294,17 @@ export async function waitForTagsReady(): Promise<void> {
 export async function insertTag(
   params: ActionType["insertTag"],
 ): Promise<void> {
+  if (envConfig.isDesktop) {
+    tagsCollection.utils.writeInsert({
+      _id: crypto.randomUUID().replaceAll("-", ""),
+      name: params.name.replace(/_/g, " "),
+      personalBests: { time: {}, words: {}, quote: {}, zen: {}, custom: {} },
+      active: false,
+    });
+    updateTagsInFilterStorage(getTags().map((tag) => tag._id));
+    await persistDesktopTags();
+    return;
+  }
   const transaction = actions.insertTag(params);
   await transaction.isPersisted.promise;
 }
@@ -282,6 +312,14 @@ export async function insertTag(
 export async function updateTagName(
   params: ActionType["updateTagName"],
 ): Promise<void> {
+  if (envConfig.isDesktop) {
+    tagsCollection.utils.writeUpdate({
+      _id: params.tagId,
+      name: params.newName.replace(/_/g, " "),
+    });
+    await persistDesktopTags();
+    return;
+  }
   const transaction = actions.updateTagName(params);
   await transaction.isPersisted.promise;
 }
@@ -289,6 +327,20 @@ export async function updateTagName(
 export async function clearTagPBs(
   params: ActionType["clearTagPBs"],
 ): Promise<void> {
+  if (envConfig.isDesktop) {
+    tagsCollection.utils.writeUpdate({
+      _id: params.tagId,
+      personalBests: {
+        time: {},
+        words: {},
+        quote: {},
+        zen: {},
+        custom: {},
+      },
+    });
+    await persistDesktopTags();
+    return;
+  }
   const transaction = actions.clearTagPBs(params);
   await transaction.isPersisted.promise;
 }
@@ -296,6 +348,12 @@ export async function clearTagPBs(
 export async function deleteTag(
   params: ActionType["deleteTag"],
 ): Promise<void> {
+  if (envConfig.isDesktop) {
+    tagsCollection.utils.writeDelete(params.tagId);
+    updateTagsInFilterStorage(getTags().map((tag) => tag._id));
+    await persistDesktopTags();
+    return;
+  }
   const transaction = actions.deleteTag(params);
   await transaction.isPersisted.promise;
 }
@@ -305,6 +363,7 @@ export async function toggleTagActive(
 ): Promise<void> {
   const transaction = actions.toggleTagActive(params);
   await transaction.isPersisted.promise;
+  if (envConfig.isDesktop && !params.noSave) await persistDesktopTags();
 }
 
 export async function setTagActive(
@@ -312,6 +371,7 @@ export async function setTagActive(
 ): Promise<void> {
   const transaction = actions.setTagActive(params);
   await transaction.isPersisted.promise;
+  if (envConfig.isDesktop && !params.noSave) await persistDesktopTags();
 }
 
 export async function clearActiveTags(
@@ -319,6 +379,7 @@ export async function clearActiveTags(
 ): Promise<void> {
   const transaction = actions.clearActiveTags(params);
   await transaction.isPersisted.promise;
+  if (envConfig.isDesktop && !params.noSave) await persistDesktopTags();
 }
 
 function getTags(): TagItem[] {
@@ -349,6 +410,7 @@ export function saveActiveToLocalStorage(): void {
     if (t.active) activeIds.push(t._id);
   });
   activeTagsLS.set(activeIds);
+  void persistDesktopTags();
 }
 
 // --- Personal bests ---
@@ -479,6 +541,7 @@ export function saveLocalTagPB<M extends Mode>(
   // using utils.writeUpdate instead of collection.update because we dont need to send this to the API
   // the result saving already updates the tag pb in the db
   tagsCollection.utils.writeUpdate(tag);
+  void persistDesktopTags();
 }
 
 export function reconcileLocalTagPB<M extends Mode>(

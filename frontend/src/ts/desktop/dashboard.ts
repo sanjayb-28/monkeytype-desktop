@@ -1,23 +1,7 @@
-import type { Mode, PersonalBests } from "@monkeytype/schemas/shared";
+import type { Mode } from "@monkeytype/schemas/shared";
+import type { ResultFilters } from "@monkeytype/schemas/users";
 
 import type { SnapshotResult } from "../constants/default-snapshot";
-
-export const dashboardRanges = ["all", "7d", "30d", "90d", "1y"] as const;
-export type DashboardRange = (typeof dashboardRanges)[number];
-
-export type DashboardFilters = {
-  language: string;
-  mode: "all" | Mode;
-  numbers: boolean | null;
-  pbOnly: boolean;
-  punctuation: boolean | null;
-  range: DashboardRange;
-};
-
-export type DashboardSort = {
-  direction: "asc" | "desc";
-  field: "acc" | "consistency" | "timestamp" | "wpm";
-};
 
 export type DashboardStats = {
   averageAccuracy: number;
@@ -31,92 +15,91 @@ export type DashboardStats = {
   timeTyping: number;
 };
 
-export type DailyActivity = {
-  averageWpm: number;
-  completed: number;
-  dayTimestamp: number;
-  timeTyping: number;
-};
-
-export type CalendarDay = {
-  count: number;
-  date: Date;
-  key: string;
-  level: 0 | 1 | 2 | 3 | 4;
-  timeTyping: number;
-};
-
-export type PersonalBest = {
-  acc: number;
-  consistency: number;
-  mode: "time" | "words";
-  mode2: string;
-  rawWpm: number;
-  timestamp: number;
-  wpm: number;
-};
-
-export const defaultDashboardFilters = (): DashboardFilters => ({
-  language: "all",
-  mode: "all",
-  numbers: null,
-  pbOnly: false,
-  punctuation: null,
-  range: "all",
-});
-
 const average = (values: number[]): number =>
   values.length === 0
     ? 0
     : values.reduce((total, value) => total + value, 0) / values.length;
 
-const startOfLocalDay = (timestamp: number): number => {
-  const date = new Date(timestamp);
-  date.setHours(0, 0, 0, 0);
-  return date.getTime();
-};
-
-const subtractLocalDays = (timestamp: number, days: number): number => {
-  const date = new Date(startOfLocalDay(timestamp));
-  date.setDate(date.getDate() - days);
-  return date.getTime();
-};
-
 export function filterDashboardResults(
   results: SnapshotResult<Mode>[],
-  filters: DashboardFilters,
+  filters: ResultFilters,
   now = Date.now(),
 ): SnapshotResult<Mode>[] {
-  const rangeDays: Record<Exclude<DashboardRange, "all">, number> = {
-    "7d": 7,
-    "30d": 30,
-    "90d": 90,
-    "1y": 365,
+  const enabled = <T extends string>(
+    values: Partial<Record<T, boolean>>,
+  ): T[] =>
+    Object.entries(values)
+      .filter(([, selected]) => selected === true)
+      .map(([value]) => value as T);
+  const enabledBooleans = (
+    values: Record<"on" | "off", boolean> | Record<"yes" | "no", boolean>,
+  ): boolean[] =>
+    Object.entries(values)
+      .filter(([, selected]) => selected)
+      .map(([value]) => value === "on" || value === "yes");
+  const dateSeconds: Record<keyof ResultFilters["date"], number> = {
+    all: 0,
+    last_day: 24 * 60 * 60,
+    last_week: 7 * 24 * 60 * 60,
+    last_month: 30 * 24 * 60 * 60,
+    last_3months: 90 * 24 * 60 * 60,
   };
+  const selectedDate = enabled(filters.date)[0] ?? "all";
   const cutoff =
-    filters.range === "all"
-      ? 0
-      : subtractLocalDays(now, rangeDays[filters.range] - 1);
+    selectedDate === "all" ? 0 : now - dateSeconds[selectedDate] * 1000;
+  const selectedDifficulties = enabled(filters.difficulty);
+  const selectedPb = enabledBooleans(filters.pb);
+  const selectedModes = enabled(filters.mode);
+  const selectedWords = enabled(filters.words);
+  const selectedTimes = enabled(filters.time);
+  const selectedPunctuation = enabledBooleans(filters.punctuation);
+  const selectedNumbers = enabledBooleans(filters.numbers);
+  const quoteLengthMap = { short: 0, medium: 1, long: 2, thicc: 3 } as const;
+  const selectedQuoteLengths: number[] = enabled(filters.quoteLength).map(
+    (length) => quoteLengthMap[length],
+  );
+  const selectedTags = enabled(filters.tags);
+  const selectedFunboxes = enabled(filters.funbox);
+  const selectedLanguages = enabled(filters.language);
+
+  const matchesMode2 = (
+    result: SnapshotResult<Mode>,
+    mode: "time" | "words",
+    selected: string[],
+    standard: string[],
+  ): boolean => {
+    if (result.mode !== mode || selected.length === 5) return true;
+    return (
+      selected.includes(result.mode2) ||
+      (selected.includes("custom") && !standard.includes(result.mode2))
+    );
+  };
+
+  const matchesCollection = (
+    selected: string[],
+    resultValues: string[],
+  ): boolean =>
+    selected.some((value) =>
+      value === "none"
+        ? resultValues.length === 0
+        : resultValues.includes(value),
+    );
 
   return results.filter(
     (result) =>
       result.timestamp >= cutoff &&
-      (filters.mode === "all" || result.mode === filters.mode) &&
-      (filters.language === "all" || result.language === filters.language) &&
-      (filters.punctuation === null ||
-        result.punctuation === filters.punctuation) &&
-      (filters.numbers === null || result.numbers === filters.numbers) &&
-      (!filters.pbOnly || result.isPb === true),
-  );
-}
-
-export function sortDashboardResults(
-  results: SnapshotResult<Mode>[],
-  sorting: DashboardSort,
-): SnapshotResult<Mode>[] {
-  const direction = sorting.direction === "asc" ? 1 : -1;
-  return [...results].sort(
-    (left, right) => (left[sorting.field] - right[sorting.field]) * direction,
+      selectedDifficulties.includes(result.difficulty) &&
+      selectedPb.includes(result.isPb === true) &&
+      selectedModes.includes(result.mode) &&
+      selectedPunctuation.includes(result.punctuation) &&
+      selectedNumbers.includes(result.numbers) &&
+      (result.quoteLength === -1 ||
+        selectedQuoteLengths.includes(result.quoteLength)) &&
+      selectedLanguages.includes(result.language) &&
+      matchesCollection(selectedTags, result.tags) &&
+      matchesCollection(selectedFunboxes, result.funbox) &&
+      matchesMode2(result, "time", selectedTimes, ["15", "30", "60", "120"]) &&
+      matchesMode2(result, "words", selectedWords, ["10", "25", "50", "100"]),
   );
 }
 
@@ -138,136 +121,6 @@ export function calculateDashboardStats(
     lastTenWpm: average(lastTen.map((result) => result.wpm)),
     timeTyping: results.reduce((total, result) => total + result.timeTyping, 0),
   };
-}
-
-export function groupDailyActivity(
-  results: SnapshotResult<Mode>[],
-): DailyActivity[] {
-  const days = new Map<
-    number,
-    { completed: number; timeTyping: number; totalWpm: number }
-  >();
-
-  for (const result of results) {
-    const dayTimestamp = startOfLocalDay(result.timestamp);
-    const day = days.get(dayTimestamp) ?? {
-      completed: 0,
-      timeTyping: 0,
-      totalWpm: 0,
-    };
-    day.completed += 1;
-    day.timeTyping += result.timeTyping;
-    day.totalWpm += result.wpm;
-    days.set(dayTimestamp, day);
-  }
-
-  return [...days.entries()]
-    .sort(([left], [right]) => left - right)
-    .map(([dayTimestamp, day]) => ({
-      averageWpm: day.totalWpm / day.completed,
-      completed: day.completed,
-      dayTimestamp,
-      timeTyping: day.timeTyping,
-    }));
-}
-
-export function buildActivityCalendar(
-  results: SnapshotResult<Mode>[],
-  year: number,
-): CalendarDay[] {
-  const counts = new Map<number, { count: number; timeTyping: number }>();
-  for (const result of results) {
-    const day = startOfLocalDay(result.timestamp);
-    const current = counts.get(day) ?? { count: 0, timeTyping: 0 };
-    current.count += 1;
-    current.timeTyping += result.timeTyping;
-    counts.set(day, current);
-  }
-
-  const start = new Date(year, 0, 1);
-  start.setDate(start.getDate() - start.getDay());
-  const end = new Date(year, 11, 31);
-  end.setDate(end.getDate() + (6 - end.getDay()));
-
-  const activeCounts = [...counts.entries()]
-    .filter(([timestamp]) => new Date(timestamp).getFullYear() === year)
-    .map(([, value]) => value.count)
-    .sort((left, right) => left - right);
-  const upperQuartile =
-    activeCounts[Math.max(0, Math.floor(activeCounts.length * 0.75) - 1)] ?? 1;
-
-  const days: CalendarDay[] = [];
-  for (
-    const date = new Date(start);
-    date <= end;
-    date.setDate(date.getDate() + 1)
-  ) {
-    const timestamp = startOfLocalDay(date.getTime());
-    const activity = counts.get(timestamp) ?? { count: 0, timeTyping: 0 };
-    const ratio = activity.count / upperQuartile;
-    const level: CalendarDay["level"] =
-      activity.count === 0
-        ? 0
-        : ratio <= 0.25
-          ? 1
-          : ratio <= 0.5
-            ? 2
-            : ratio <= 1
-              ? 3
-              : 4;
-    days.push({
-      count: activity.count,
-      date: new Date(date),
-      key: `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`,
-      level,
-      timeTyping: activity.timeTyping,
-    });
-  }
-  return days;
-}
-
-export function getPersonalBests(
-  results: SnapshotResult<Mode>[],
-): PersonalBest[] {
-  const bests = new Map<string, PersonalBest>();
-  for (const result of results) {
-    if (result.mode !== "time" && result.mode !== "words") continue;
-    const key = `${result.mode}:${result.mode2}`;
-    const current = bests.get(key);
-    if (current !== undefined && current.wpm >= result.wpm) continue;
-    bests.set(key, {
-      acc: result.acc,
-      consistency: result.consistency,
-      mode: result.mode,
-      mode2: result.mode2,
-      rawWpm: result.rawWpm,
-      timestamp: result.timestamp,
-      wpm: result.wpm,
-    });
-  }
-  return [...bests.values()];
-}
-
-export function getStoredPersonalBests(stored: PersonalBests): PersonalBest[] {
-  const bests: PersonalBest[] = [];
-  for (const mode of ["time", "words"] as const) {
-    for (const [mode2, candidates] of Object.entries(stored[mode])) {
-      const best = [...candidates].sort(
-        (left, right) => right.wpm - left.wpm,
-      )[0];
-      if (best === undefined) continue;
-      bests.push({
-        acc: best.acc,
-        consistency: best.consistency,
-        mode,
-        mode2,
-        rawWpm: best.raw,
-        timestamp: best.timestamp,
-        wpm: best.wpm,
-      });
-    }
-  }
-  return bests;
 }
 
 const csvEscape = (

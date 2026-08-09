@@ -35,33 +35,58 @@ async function showPage(page: keyof typeof pageSelectors): Promise<void> {
   const previousPage = getActivePage();
   if (!firstNavigation && previousPage === page) return;
 
+  const duration = Misc.applyReducedMotion(250);
+  const previousElement = firstNavigation
+    ? null
+    : qsr(pageSelectors[previousPage as keyof typeof pageSelectors]);
+  const nextElement = qsr(pageSelectors[page]);
+
   PageTransition.set(true);
-  if (!firstNavigation && previousPage === "test" && page !== "test") {
-    await PageTest.page.beforeHide?.();
-    await PageTest.page.afterHide?.();
+  try {
+    qsa(".page").removeClass("active");
+
+    if (previousElement !== null) {
+      if (previousPage === "test") await PageTest.page.beforeHide?.();
+      previousElement.show().setStyle({ opacity: "1" });
+      await previousElement.promiseAnimate({
+        opacity: "0",
+        duration: duration / 2,
+      });
+      previousElement.hide();
+      if (previousPage === "test") await PageTest.page.afterHide?.();
+    } else {
+      qsa(".page").hide();
+    }
+
+    setActivePage(page);
+    if (page === "test" && (firstNavigation || previousPage !== "test")) {
+      await PageTest.page.beforeShow({});
+    }
+
+    nextElement.show().setStyle({ opacity: "0" }).addClass("active");
+    await nextElement.promiseAnimate({
+      opacity: "1",
+      duration: duration / 2,
+    });
+
+    if (page === "test") {
+      Misc.updateTitle();
+    } else {
+      const pageTitle =
+        page === "404" ? "404" : `${page[0]?.toUpperCase()}${page.slice(1)}`;
+      Misc.updateTitle(`${pageTitle} | Monkeytype`);
+    }
+
+    firstNavigation = false;
+  } finally {
+    PageTransition.set(false);
   }
-
-  qsa(".page").removeClass("active").hide();
-  setActivePage(page);
-
-  if (page === "test" && (firstNavigation || previousPage !== "test")) {
-    await PageTest.page.beforeShow({});
-  }
-
-  qsr(pageSelectors[page]).show().setStyle({ opacity: "1" }).addClass("active");
-
-  if (page === "test") {
-    Misc.updateTitle();
-  } else {
-    document.title = `${page === "404" ? "404" : page[0]?.toUpperCase() + page.slice(1)} | Monkeytype`;
-  }
-
-  firstNavigation = false;
-  PageTransition.set(false);
 }
 
 export async function navigate(
-  url = window.location.pathname + window.location.search,
+  url = window.location.pathname +
+    window.location.search +
+    window.location.hash,
   options = {} as NavigateOptions,
 ): Promise<void> {
   if (
@@ -83,8 +108,11 @@ export async function navigate(
   const target = new URL(url, window.location.origin);
   const routePath = target.pathname === "/desktop.html" ? "/" : target.pathname;
   const current = new URL(window.location.href);
-  if (current.pathname + current.search !== target.pathname + target.search) {
-    history.pushState(null, "", target.pathname + target.search);
+  if (
+    current.pathname + current.search + current.hash !==
+    target.pathname + target.search + target.hash
+  ) {
+    history.pushState(null, "", target.pathname + target.search + target.hash);
   }
   const page = pages.get(routePath as DesktopPath) ?? "404";
   await showPage(page);

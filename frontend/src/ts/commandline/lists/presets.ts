@@ -3,6 +3,7 @@ import { isAuthenticated } from "../../states/core";
 import { Command, CommandsSubgroup } from "../types";
 import { __nonReactive } from "../../collections/presets";
 import { showModal } from "../../states/modals";
+import { envConfig } from "virtual:env-config";
 
 const subgroup: CommandsSubgroup = {
   title: "Presets...",
@@ -20,7 +21,7 @@ const commands: Command[] = [
     icon: "fa-sliders-h",
     subgroup,
     available: (): boolean => {
-      return isAuthenticated();
+      return isAuthenticated() || envConfig.isDesktop;
     },
   },
 ];

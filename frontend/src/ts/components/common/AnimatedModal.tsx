@@ -307,6 +307,17 @@ export function AnimatedModal(props: AnimatedModalProps): JSXElement {
     }
   };
 
+  const handleCancel = (e: Event): void => {
+    e.preventDefault();
+    if (props.closeOnEscape === false) return;
+    const keyboardEvent = new KeyboardEvent("keydown", { key: "Escape" });
+    if (props.onEscape) {
+      props.onEscape(keyboardEvent);
+    } else {
+      storeHideModal(props.id);
+    }
+  };
+
   onCleanup(() => {
     if (dialogEl()?.native.open) {
       dialogEl()?.native.close();
@@ -326,6 +337,7 @@ export function AnimatedModal(props: AnimatedModalProps): JSXElement {
         display: "none",
       }}
       onKeyDown={handleKeyDown}
+      onCancel={handleCancel}
       onMouseDown={handleBackdropClick}
     >
       {/*

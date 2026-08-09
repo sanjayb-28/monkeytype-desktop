@@ -1,4 +1,5 @@
 use std::fs;
+use tauri::Manager;
 
 fn valid_suggested_name(name: &str) -> bool {
     !name.is_empty()
@@ -50,6 +51,14 @@ async fn open_text_file() -> Result<Option<String>, String> {
 pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![save_text_file, open_text_file])
+        .setup(|app| {
+            let window = app.get_webview_window("main").ok_or_else(|| {
+                std::io::Error::new(std::io::ErrorKind::NotFound, "main window not found")
+            })?;
+            window.show()?;
+            window.maximize()?;
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("failed to run Monkeytype Desktop");
 }

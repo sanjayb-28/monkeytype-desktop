@@ -76,18 +76,22 @@ export const commands: CommandsSubgroup = {
     },
     ...QuoteFavoriteCommands,
     ...BailOutCommands,
-    {
-      id: "shareTestSettings",
-      display: "Share test settings",
-      icon: "fa-share",
-      exec: (): void => {
-        showModal("ShareTestSettings");
-      },
-    },
+    ...(envConfig.isDesktop
+      ? []
+      : [
+          {
+            id: "shareTestSettings",
+            display: "Share test settings",
+            icon: "fa-share",
+            exec: (): void => {
+              showModal("ShareTestSettings");
+            },
+          } satisfies Command,
+        ]),
 
     //account
-    ...(envConfig.isDesktop ? [] : TagsCommands),
-    ...(envConfig.isDesktop ? [] : PresetsCommands),
+    ...TagsCommands,
+    ...PresetsCommands,
 
     //behavior
     ...buildCommands(
@@ -253,26 +257,30 @@ export const commands: CommandsSubgroup = {
         clearAllNotifications();
       },
     },
-    {
-      id: "clearSwCache",
-      display: "Clear SW cache",
-      icon: "fa-cog",
-      exec: async (): Promise<void> => {
-        const clist = await caches.keys();
-        for (const name of clist) {
-          await caches.delete(name);
-        }
-        window.location.reload();
-      },
-    },
-    {
-      id: "getSwCache",
-      display: "Get SW cache",
-      icon: "fa-cog",
-      exec: async (): Promise<void> => {
-        alert(await caches.keys());
-      },
-    },
+    ...(envConfig.isDesktop
+      ? []
+      : ([
+          {
+            id: "clearSwCache",
+            display: "Clear SW cache",
+            icon: "fa-cog",
+            exec: async (): Promise<void> => {
+              const clist = await caches.keys();
+              for (const name of clist) {
+                await caches.delete(name);
+              }
+              window.location.reload();
+            },
+          },
+          {
+            id: "getSwCache",
+            display: "Get SW cache",
+            icon: "fa-cog",
+            exec: async (): Promise<void> => {
+              alert(await caches.keys());
+            },
+          },
+        ] satisfies Command[])),
     {
       id: "copyResultStats",
       display: "Copy last event log (result data)",

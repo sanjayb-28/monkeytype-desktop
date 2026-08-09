@@ -8,6 +8,7 @@ import * as PaceCaret from "../../test/pace-caret";
 import { isAuthenticated } from "../../states/core";
 import { Command, CommandsSubgroup } from "../types";
 import { showAddTagModal } from "../../components/modals/AddTagModal";
+import { envConfig } from "virtual:env-config";
 
 const subgroup: CommandsSubgroup = {
   title: "Tags...",
@@ -24,7 +25,7 @@ const commands: Command[] = [
     icon: "fa-tag",
     subgroup,
     available: (): boolean => {
-      return isAuthenticated();
+      return isAuthenticated() || envConfig.isDesktop;
     },
   },
 ];

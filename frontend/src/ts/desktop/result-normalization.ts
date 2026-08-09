@@ -70,6 +70,8 @@ export function normalizeResult(
   return {
     ...result,
     name: "name" in result && result.name !== undefined ? result.name : "local",
+    stopOnLetter:
+      "stopOnLetter" in result ? (result.stopOnLetter ?? false) : false,
     timeTyping: calculateTimeTyping(result),
     words: Math.round((result.wpm / 60) * result.testDuration),
     dayTimestamp: startOfLocalDay(result.timestamp),
