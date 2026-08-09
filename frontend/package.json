@@ -40,7 +40,7 @@
     "@solidjs/meta": "0.29.4",
     "@tanstack/pacer-lite": "0.2.2",
     "@tanstack/query-db-collection": "1.0.40",
-    "@tanstack/solid-db": "0.2.22",
+    "@tanstack/solid-db": "0.2.31",
     "@tanstack/solid-form": "1.33.0",
     "@tanstack/solid-hotkeys": "0.10.0",
     "@tanstack/solid-query": "5.101.0",
