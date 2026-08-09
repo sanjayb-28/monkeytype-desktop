@@ -7,6 +7,7 @@ import {
   Show,
   on,
 } from "solid-js";
+import { envConfig } from "virtual:env-config";
 import { z } from "zod";
 
 import Ape from "../../ape";
@@ -106,10 +107,11 @@ function Item(props: {
   onReport: () => void;
   onToggleFavorite: () => Promise<boolean>;
 }): JSXElement {
-  const loggedOut = (): boolean => !isAuthenticated();
+  const canFavorite = (): boolean => isAuthenticated() || envConfig.isDesktop;
+  const canReport = (): boolean => isAuthenticated() && !envConfig.isDesktop;
   const [isFav, setIsFav] = createSignal(
     // oxlint-disable-next-line solid/reactivity -- intentionally reading once as initial value
-    !loggedOut() && QuotesController.isQuoteFavorite(props.quote),
+    canFavorite() && QuotesController.isQuoteFavorite(props.quote),
   );
 
   const handleToggleFavorite = async (): Promise<void> => {
@@ -159,20 +161,22 @@ function Item(props: {
               )}
             ></span>
           </div>
-          <Show when={!loggedOut()}>
+          <Show when={canFavorite()}>
             <div class="flex shrink">
-              <Button
-                variant="text"
-                fa={{ icon: "fa-flag" }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  props.onReport();
-                }}
-                balloon={{
-                  text: "Report quote",
-                  position: props.isRtl ? "right" : "left",
-                }}
-              />
+              <Show when={canReport()}>
+                <Button
+                  variant="text"
+                  fa={{ icon: "fa-flag" }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    props.onReport();
+                  }}
+                  balloon={{
+                    text: "Report quote",
+                    position: props.isRtl ? "right" : "left",
+                  }}
+                />
+              </Show>
               <Button
                 variant="text"
                 fa={{
@@ -232,10 +236,7 @@ export function QuoteSearchModal(): JSXElement {
 
   const isQuoteMod = (): boolean => {
     const quoteMod = DB.getSnapshot()?.quoteMod;
-    return (
-      quoteMod !== undefined &&
-      (quoteMod === true || (quoteMod as string) !== "")
-    );
+    return quoteMod === true || typeof quoteMod === "string";
   };
 
   const performSearch = (text: string): void => {
@@ -462,7 +463,7 @@ export function QuoteSearchModal(): JSXElement {
                 onClick={() => void handleSubmitClick()}
               />
             </Show>
-            <Show when={isQuoteMod()}>
+            <Show when={!envConfig.isDesktop && isQuoteMod()}>
               <Button
                 fa={{ icon: "fa-check" }}
                 text="Approve quotes"

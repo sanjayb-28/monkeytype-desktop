@@ -1,4 +1,5 @@
 import { getFunbox } from "@monkeytype/funbox";
+import type { Language } from "@monkeytype/schemas/languages";
 import type {
   Mode,
   PersonalBest,
@@ -16,6 +17,7 @@ const defaultDatabaseName = "monkeytype-desktop-data";
 const metadataKey = "snapshot";
 
 export type DesktopData = {
+  favoriteQuotes: Partial<Record<Language, string[]>>;
   personalBests: PersonalBests;
   results: SnapshotResult<Mode>[];
   typingStats: {
@@ -43,6 +45,7 @@ type DesktopDatabase = DBSchema & {
 };
 
 export const defaultDesktopData = (): DesktopData => ({
+  favoriteQuotes: {},
   personalBests: {
     time: {},
     words: {},
@@ -62,6 +65,7 @@ export const defaultDesktopData = (): DesktopData => ({
 });
 
 const metadataFromData = (data: DesktopData): DesktopMetadata => ({
+  favoriteQuotes: data.favoriteQuotes,
   personalBests: data.personalBests,
   typingStats: data.typingStats,
   xp: data.xp,
@@ -100,6 +104,7 @@ const sanitizeMetadata = (value: unknown): DesktopMetadata => {
   const candidate = value as Partial<DesktopMetadata>;
   const typingStats = candidate.typingStats;
   return {
+    favoriteQuotes: candidate.favoriteQuotes ?? {},
     personalBests:
       candidate.personalBests ?? structuredClone(fallback.personalBests),
     typingStats: {

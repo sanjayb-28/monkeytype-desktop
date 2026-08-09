@@ -31,7 +31,7 @@ export function DesktopActivityCalendar(props: {
 
   return (
     <section
-      class="desktopActivityCalendar grid gap-4"
+      class="desktopActivityCalendar grid gap-4 rounded bg-sub-alt p-4"
       aria-labelledby="desktop-activity-title"
       aria-describedby="desktop-activity-summary"
     >
@@ -62,21 +62,32 @@ export function DesktopActivityCalendar(props: {
       </div>
 
       <div class="overflow-x-auto pb-2">
-        <div class="activityGrid" aria-hidden="true">
-          <For each={props.days}>
-            {(day) => (
-              <div
-                class="activityDay"
-                data-level={day.level}
-                data-outside={
-                  day.date.getFullYear() === props.selectedYear
-                    ? undefined
-                    : "true"
-                }
-                title={`${day.date.toLocaleDateString()}: ${day.count} tests, ${formatDuration(day.timeTyping)}`}
-              ></div>
-            )}
-          </For>
+        <div class="grid min-w-[48rem] grid-cols-[auto_1fr] items-stretch gap-3">
+          <div class="activityWeekdays grid grid-rows-7 text-em-xs text-sub">
+            <span></span>
+            <span>monday</span>
+            <span></span>
+            <span>wednesday</span>
+            <span></span>
+            <span>friday</span>
+            <span></span>
+          </div>
+          <div class="activityGrid" aria-hidden="true">
+            <For each={props.days}>
+              {(day) => (
+                <div
+                  class="activityDay"
+                  data-level={day.level}
+                  data-outside={
+                    day.date.getFullYear() === props.selectedYear
+                      ? undefined
+                      : "true"
+                  }
+                  title={`${day.date.toLocaleDateString()}: ${day.count} tests, ${formatDuration(day.timeTyping)}`}
+                ></div>
+              )}
+            </For>
+          </div>
         </div>
       </div>
 

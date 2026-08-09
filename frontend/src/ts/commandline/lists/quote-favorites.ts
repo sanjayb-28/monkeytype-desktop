@@ -8,6 +8,10 @@ import { isAuthenticated } from "../../states/core";
 import { showLoaderBar, hideLoaderBar } from "../../states/loader-bar";
 import { Command } from "../types";
 import { getCurrentQuote } from "../../states/test";
+import { envConfig } from "virtual:env-config";
+
+const canUseQuoteFavorites = (): boolean =>
+  isAuthenticated() || envConfig.isDesktop;
 
 const commands: Command[] = [
   {
@@ -17,7 +21,7 @@ const commands: Command[] = [
     available: (): boolean => {
       const quote = getCurrentQuote();
       return (
-        isAuthenticated() &&
+        canUseQuoteFavorites() &&
         quote !== null &&
         Config.mode === "quote" &&
         !QuotesController.isQuoteFavorite(quote)
@@ -45,7 +49,7 @@ const commands: Command[] = [
     available: (): boolean => {
       const quote = getCurrentQuote();
       return (
-        isAuthenticated() &&
+        canUseQuoteFavorites() &&
         quote !== null &&
         Config.mode === "quote" &&
         QuotesController.isQuoteFavorite(quote)

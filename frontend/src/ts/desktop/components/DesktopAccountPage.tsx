@@ -10,7 +10,7 @@ import {
 } from "solid-js";
 
 import { Button } from "../../components/common/Button";
-import { H2 } from "../../components/common/Headers";
+import { Fa } from "../../components/common/Fa";
 import { Page } from "../../components/common/Page";
 import { getConfig } from "../../config/store";
 import {
@@ -69,6 +69,16 @@ const formatDuration = (seconds: number): string => {
   if (minutes < 60) return `${minutes}m`;
   const hours = Math.floor(minutes / 60);
   return `${hours}h ${minutes % 60}m`;
+};
+
+const formatClockDuration = (seconds: number): string => {
+  const safeSeconds = Math.max(0, Math.round(seconds));
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  const remainingSeconds = safeSeconds % 60;
+  return [hours, minutes, remainingSeconds]
+    .map((value) => String(value).padStart(2, "0"))
+    .join(":");
 };
 
 const formatNumber = (value: number): string =>
@@ -239,47 +249,51 @@ export function DesktopAccountPage(): JSXElement {
 
   return (
     <Page id="account">
-      <div class="desktopDashboard flex flex-col gap-12">
-        <div class="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <H2
-              class="pb-1"
-              fa={{ icon: "fa-chart-line" }}
-              text="local dashboard"
-            />
-            <div class="text-sub">
-              your complete typing history, stored only on this Mac
+      <div class="desktopDashboard flex flex-col gap-8">
+        <section class="desktopProfileSummary grid overflow-hidden rounded bg-sub-alt md:grid-cols-[21rem_1fr_auto]">
+          <div class="flex items-center gap-4 p-4">
+            <div class="grid h-20 w-20 shrink-0 place-items-center rounded-full bg-bg text-5xl text-sub">
+              <Fa icon="fa-user" />
+            </div>
+            <div class="min-w-0">
+              <div class="truncate text-2xl text-text">local profile</div>
+              <div class="text-em-xs text-sub">offline • this Mac</div>
             </div>
           </div>
-          <div class="flex gap-2">
-            <Button
-              fa={{ icon: "fa-file-csv" }}
-              text="export CSV"
-              disabled={allResults().length === 0}
-              onClick={() => void exportCsv()}
+
+          <div class="desktopLifetimeStats grid grid-cols-3 items-center p-4">
+            <LifetimeStat
+              label="tests started"
+              value={formatNumber(data().typingStats.startedTests)}
             />
+            <LifetimeStat
+              label="tests completed"
+              value={formatNumber(data().typingStats.completedTests)}
+            />
+            <LifetimeStat
+              label="time typing"
+              value={formatClockDuration(data().typingStats.timeTyping)}
+            />
+          </div>
+
+          <div class="grid grid-cols-2 md:grid-cols-1">
             <Button
-              fa={{ icon: "fa-download" }}
-              text="export backup"
+              fa={{ icon: "fa-download", fixedWidth: true }}
+              balloon={{ text: "Export local backup", position: "left" }}
+              class="h-full rounded-none text-sub hover:text-bg"
               onClick={() => void exportBackup()}
             />
             <Button
-              fa={{ icon: "fa-upload" }}
-              text="restore backup"
+              fa={{ icon: "fa-upload", fixedWidth: true }}
+              balloon={{ text: "Restore local backup", position: "left" }}
+              class="h-full rounded-none text-sub hover:text-bg"
               onClick={() => void chooseBackup()}
             />
           </div>
-        </div>
+        </section>
 
-        <section class="desktopLifetimeStats grid grid-cols-2 gap-y-6 sm:grid-cols-3 lg:grid-cols-5">
-          <LifetimeStat
-            label="tests completed"
-            value={formatNumber(data().typingStats.completedTests)}
-          />
-          <LifetimeStat
-            label="time typing"
-            value={formatDuration(data().typingStats.timeTyping)}
-          />
+        <section class="desktopLocalLifetime grid items-center gap-4 rounded bg-sub-alt p-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div class="text-center text-sub">local lifetime</div>
           <LifetimeStat
             label="completion rate"
             value={`${Math.round(
@@ -457,11 +471,19 @@ export function DesktopAccountPage(): JSXElement {
           </section>
 
           <section class="grid gap-5">
-            <div>
-              <div class="text-xl text-text">result history</div>
-              <div class="text-em-xs text-sub">
-                select a row to inspect its settings and speed trace
+            <div class="flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <div class="text-xl text-text">result history</div>
+                <div class="text-em-xs text-sub">
+                  select a row to inspect its settings and speed trace
+                </div>
               </div>
+              <Button
+                fa={{ icon: "fa-file-csv" }}
+                text="export CSV"
+                disabled={allResults().length === 0}
+                onClick={() => void exportCsv()}
+              />
             </div>
             <DesktopResultsTable
               expandedResultId={expandedResultId()}

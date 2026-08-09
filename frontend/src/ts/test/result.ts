@@ -910,7 +910,7 @@ export function updateRateQuote(randomQuote: Quote | null): void {
 function updateQuoteFavorite(randomQuote: Quote | null): void {
   const icon = qs(".pageTest #result #favoriteQuoteButton .icon");
 
-  if (Config.mode !== "quote" || !isAuthenticated()) {
+  if (Config.mode !== "quote" || (!isAuthenticated() && !envConfig.isDesktop)) {
     icon?.getParent()?.hide();
     return;
   }
@@ -1044,6 +1044,10 @@ export async function update(
     qs("main #result .chart")?.show();
     if (!isAuthenticated() && !envConfig.isDesktop) {
       qs("main #result .loginTip")?.show();
+      qs("main #result #rateQuoteButton")?.hide();
+      qs("main #result #reportQuoteButton")?.hide();
+    } else if (envConfig.isDesktop) {
+      qs("main #result .loginTip")?.hide();
       qs("main #result #rateQuoteButton")?.hide();
       qs("main #result #reportQuoteButton")?.hide();
     } else {
@@ -1344,6 +1348,33 @@ qs(".pageTest #favoriteQuoteButton")?.on("click", async () => {
   const $button = qs(".pageTest #favoriteQuoteButton .icon");
   const dbSnapshot = DB.getSnapshot();
   if (!dbSnapshot) return;
+
+  if (envConfig.isDesktop) {
+    const quote = getCurrentQuote();
+    if (quote === null) {
+      showErrorNotification("Could not get quote stats!");
+      return;
+    }
+
+    const shouldFavorite = !$button?.hasClass("fas");
+    try {
+      showLoaderBar();
+      await QuotesController.setQuoteFavorite(quote, shouldFavorite);
+      $button
+        ?.removeClass(shouldFavorite ? "far" : "fas")
+        ?.addClass(shouldFavorite ? "fas" : "far");
+      showSuccessNotification(
+        shouldFavorite
+          ? "Quote added to favorites"
+          : "Quote removed from favorites",
+      );
+    } catch (error) {
+      showErrorNotification("Failed to update quote favorite", { error });
+    } finally {
+      hideLoaderBar();
+    }
+    return;
+  }
 
   if ($button?.hasClass("fas")) {
     // Remove from

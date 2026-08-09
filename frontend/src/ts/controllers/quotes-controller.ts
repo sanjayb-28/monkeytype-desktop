@@ -11,6 +11,7 @@ import {
   Quote as QuoteType,
   QuoteWithTextSplit as QuoteWithTextSplitType,
 } from "../types/quotes";
+import { envConfig } from "virtual:env-config";
 
 export type Quote = QuoteType;
 export type QuoteWithTextSplit = QuoteWithTextSplitType;
@@ -207,6 +208,19 @@ class QuotesController {
     const snapshot = DB.getSnapshot();
     if (!snapshot) {
       throw new Error("Snapshot is not available");
+    }
+
+    if (envConfig.isDesktop) {
+      snapshot.favoriteQuotes ??= {};
+      const favorites = (snapshot.favoriteQuotes[quote.language] ??= []);
+      const quoteId = String(quote.id);
+      const quoteIndex = favorites.indexOf(quoteId);
+
+      if (isFavorite && quoteIndex === -1) favorites.push(quoteId);
+      if (!isFavorite && quoteIndex !== -1) favorites.splice(quoteIndex, 1);
+
+      DB.setSnapshot(snapshot, { dispatchEvent: false });
+      return;
     }
 
     if (!isFavorite) {

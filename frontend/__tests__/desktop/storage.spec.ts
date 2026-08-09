@@ -140,6 +140,21 @@ describe("desktop storage", () => {
     reopenedSession.close();
   });
 
+  it("retains offline quote favorites after the database is reopened", async () => {
+    const databaseName = `monkeytype-desktop-test-${crypto.randomUUID()}`;
+    databaseNames.push(databaseName);
+    const firstSession = new DesktopStorage(databaseName, localStorage);
+    await firstSession.initialize();
+    await firstSession.save({ favoriteQuotes: { english: ["42"] } });
+    firstSession.close();
+
+    const reopenedSession = new DesktopStorage(databaseName, localStorage);
+    await reopenedSession.initialize();
+
+    expect(reopenedSession.load().favoriteQuotes).toEqual({ english: ["42"] });
+    reopenedSession.close();
+  });
+
   it("rejects failed writes and continues processing later writes", async () => {
     const storage = createStorage();
     await storage.initialize();

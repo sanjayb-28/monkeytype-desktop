@@ -17,13 +17,7 @@ export function DesktopPersonalBests(props: {
   const [revealed, setRevealed] = createSignal<string | null>(null);
 
   return (
-    <section class="grid gap-4">
-      <div>
-        <div class="text-xl text-text">personal bests</div>
-        <div class="text-em-xs text-sub">
-          fastest standard tests stored on this Mac
-        </div>
-      </div>
+    <section aria-label="personal bests">
       <div class="grid gap-4 lg:grid-cols-2">
         <For each={["time", "words"] as const}>
           {(mode) => (
@@ -57,14 +51,14 @@ export function DesktopPersonalBests(props: {
                         <div class="truncate text-em-xs text-sub">
                           {mode2} {mode === "time" ? "seconds" : "words"}
                         </div>
-                        <div class="truncate text-3xl text-text">
+                        <div class="truncate text-4xl text-text">
                           {pb() === undefined
                             ? "–"
                             : getFormatting().typingSpeed(pb()?.wpm, {
                                 showDecimalPlaces: false,
                               })}
                         </div>
-                        <div class="truncate text-sm text-sub">
+                        <div class="truncate text-xl text-sub opacity-75">
                           {pb() === undefined
                             ? "no result"
                             : getFormatting().accuracy(pb()?.acc, {

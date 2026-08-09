@@ -735,9 +735,15 @@ export const configMetadata: ConfigMetadataObject = {
     },
     isBlocked: ({ value }) => {
       if (document.readyState === "complete") {
-        if ((value === "pb" || value === "tagPb") && !isAuthenticated()) {
+        if (value === "pb" && !isAuthenticated() && !envConfig.isDesktop) {
           showNoticeNotification(
-            `Pace caret "pb" and "tag pb" are unavailable without an account`,
+            `Pace caret "pb" is unavailable without an account`,
+          );
+          return true;
+        }
+        if (value === "tagPb" && !isAuthenticated()) {
+          showNoticeNotification(
+            `Pace caret "tag pb" is unavailable without an account`,
           );
           return true;
         }

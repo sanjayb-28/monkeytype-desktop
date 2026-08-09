@@ -41,6 +41,7 @@ import { getMode2 } from "../utils/misc";
 import { getCurrentQuote } from "../states/test";
 import { removeLanguageSize } from "../utils/strings";
 import { normalizeResult } from "../desktop/result-normalization";
+import { envConfig } from "virtual:env-config";
 
 export type ResultsQueryState = {
   difficulty: SnapshotResult<Mode>["difficulty"][];
@@ -567,6 +568,25 @@ export function useUserAverage10LiveQuery(options: {
 export async function getUserAverage10Once(
   options: CurrentSettingsFilter,
 ): Promise<{ wpm: number; acc: number }> {
+  if (envConfig.isDesktop) {
+    const { loadDesktopData } = await import("../desktop/storage");
+    const results = getDesktopResultsForSettings(
+      loadDesktopData().results,
+      options,
+    )
+      .sort((left, right) => right.timestamp - left.timestamp)
+      .slice(0, 10);
+    if (results.length === 0) return { wpm: 0, acc: 0 };
+    return {
+      wpm:
+        results.reduce((total, result) => total + result.wpm, 0) /
+        results.length,
+      acc:
+        results.reduce((total, result) => total + result.acc, 0) /
+        results.length,
+    };
+  }
+
   //exit early if there is no user. Don't init the result collection
   if (!isAuthenticated()) return { wpm: 0, acc: 0 };
   const tagIds = (await getActiveTagsOnce()).map((it) => it._id);
@@ -589,6 +609,19 @@ export async function getUserAverage10Once(
 export async function getUserDailyBestOnce(
   options: CurrentSettingsFilter,
 ): Promise<{ wpm: number; acc: number }> {
+  if (envConfig.isDesktop) {
+    const { loadDesktopData } = await import("../desktop/storage");
+    const newestEligible = getDesktopResultsForSettings(
+      loadDesktopData().results,
+      options,
+    )
+      .filter((result) => result.timestamp >= Date.now() - 24 * 60 * 60 * 1000)
+      .sort((left, right) => right.wpm - left.wpm)[0];
+    return newestEligible === undefined
+      ? { wpm: 0, acc: 0 }
+      : { wpm: newestEligible.wpm, acc: newestEligible.acc };
+  }
+
   //exit early if there is no user. Don't init the result collection
   if (!isAuthenticated()) return { wpm: 0, acc: 0 };
   const tagIds = (await getActiveTagsOnce()).map((it) => it._id);
@@ -602,6 +635,22 @@ export async function getUserDailyBestOnce(
   );
 
   return result ?? { wpm: 0, acc: 0 };
+}
+
+function getDesktopResultsForSettings(
+  results: SnapshotResult<Mode>[],
+  options: CurrentSettingsFilter,
+): SnapshotResult<Mode>[] {
+  return results.filter(
+    (result) =>
+      result.mode === options.mode &&
+      result.mode2 === options.mode2 &&
+      result.punctuation === options.punctuation &&
+      result.numbers === options.numbers &&
+      result.language === options.language &&
+      result.difficulty === options.difficulty &&
+      result.lazyMode === options.lazyMode,
+  );
 }
 
 // oxlint-disable-next-line typescript/explicit-function-return-type

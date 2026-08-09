@@ -52,6 +52,7 @@ const DesktopResultSchema = z
   .passthrough();
 
 const DesktopDataSchema = z.object({
+  favoriteQuotes: z.record(z.string(), z.array(z.string())).default({}),
   personalBests: PersonalBestsSchema,
   results: z.array(DesktopResultSchema),
   typingStats: z.object({

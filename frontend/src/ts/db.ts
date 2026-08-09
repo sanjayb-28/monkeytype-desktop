@@ -83,6 +83,7 @@ export function setSnapshot(
 
   if (envConfig.isDesktop && newSnapshot !== undefined) {
     void saveDesktopData({
+      favoriteQuotes: newSnapshot.favoriteQuotes ?? {},
       personalBests: newSnapshot.personalBests,
       typingStats: newSnapshot.typingStats,
       xp: newSnapshot.xp,
@@ -103,6 +104,7 @@ export async function initSnapshot(): Promise<Snapshot | false> {
     const local = loadDesktopData();
     snap.name = "local";
     snap.uid = "local";
+    snap.favoriteQuotes = local.favoriteQuotes;
     snap.personalBests = local.personalBests;
     snap.typingStats = local.typingStats;
     snap.xp = local.xp;

@@ -865,7 +865,7 @@ const modal = new AnimatedModal({
   dialogId: "commandLine",
   storeId: MODAL_STORE_ID,
   customEscapeHandler: (): void => {
-    //
+    void goBackOrHide();
   },
   customWrapperClickHandler: (): void => {
     hide();

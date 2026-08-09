@@ -5,6 +5,7 @@ import { CustomTextModal } from "../../components/modals/CustomTextModal";
 import { CustomWordAmountModal } from "../../components/modals/CustomWordAmountModal";
 import { MobileTestConfigModal } from "../../components/modals/MobileTestConfigModal";
 import { PbTablesModal } from "../../components/modals/PbTablesModal";
+import { QuoteSearchModal } from "../../components/modals/QuoteSearchModal";
 import { SimpleModal } from "../../components/modals/SimpleModal";
 
 export function DesktopModals(): JSXElement {
@@ -16,6 +17,7 @@ export function DesktopModals(): JSXElement {
       <CustomWordAmountModal />
       <MobileTestConfigModal />
       <PbTablesModal />
+      <QuoteSearchModal />
     </>
   );
 }
