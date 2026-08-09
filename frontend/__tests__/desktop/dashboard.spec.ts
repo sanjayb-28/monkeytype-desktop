@@ -7,6 +7,7 @@ import {
   defaultDashboardFilters,
   filterDashboardResults,
   getPersonalBests,
+  getStoredPersonalBests,
   groupDailyActivity,
   resultsToCsv,
   sortDashboardResults,
@@ -69,6 +70,20 @@ describe("desktop dashboard", () => {
     );
   });
 
+  it("uses local calendar days across daylight-saving transitions", () => {
+    const dstNow = new Date(2026, 10, 7, 12).getTime();
+    const firstIncludedDay = new Date(2026, 10, 1, 0, 30).getTime();
+    const filters = { ...defaultDashboardFilters(), range: "7d" as const };
+
+    expect(
+      filterDashboardResults(
+        [result({ timestamp: firstIncludedDay })],
+        filters,
+        dstNow,
+      ),
+    ).toHaveLength(1);
+  });
+
   it("calculates aggregate and last-ten statistics", () => {
     const results = [
       result({ acc: 90, consistency: 80, timeTyping: 30, words: 40, wpm: 60 }),
@@ -124,6 +139,38 @@ describe("desktop dashboard", () => {
     ]);
     expect(bests).toHaveLength(2);
     expect(bests.find((item) => item.mode2 === "10")?.wpm).toBe(100);
+  });
+
+  it("reads canonical personal bests from desktop snapshot data", () => {
+    expect(
+      getStoredPersonalBests({
+        time: {
+          "15": [
+            {
+              acc: 99,
+              consistency: 95,
+              difficulty: "normal",
+              language: "english",
+              raw: 125,
+              timestamp: now,
+              wpm: 120,
+            },
+          ],
+        },
+        words: {},
+        quote: {},
+        zen: {},
+        custom: {},
+      }),
+    ).toContainEqual({
+      acc: 99,
+      consistency: 95,
+      mode: "time",
+      mode2: "15",
+      rawWpm: 125,
+      timestamp: now,
+      wpm: 120,
+    });
   });
 
   it("sorts without mutating input and produces CSV", () => {

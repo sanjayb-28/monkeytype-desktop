@@ -33,6 +33,7 @@ export function DesktopResultsTable(props: {
   expandedResultId: string | null;
   hasMore: boolean;
   onExpandedResultChange: (id: string | null) => void;
+  onDeleteResult: (id: string) => void;
   onLoadMore: () => void;
   onSortingChange: (sorting: DashboardSort) => void;
   results: SnapshotResult<Mode>[];
@@ -54,7 +55,9 @@ export function DesktopResultsTable(props: {
         <table class="desktopResultsTable w-full table-auto text-left text-sm">
           <thead class="text-sub">
             <tr>
-              <th class="w-8"></th>
+              <th class="w-8">
+                <span class="sr-only">personal best</span>
+              </th>
               <th>
                 <Button
                   variant="text"
@@ -104,11 +107,22 @@ export function DesktopResultsTable(props: {
                       class="resultRow cursor-pointer"
                       data-result-id={result._id}
                       data-expanded={expanded() ? "true" : undefined}
+                      role="button"
+                      tabIndex={0}
+                      aria-expanded={expanded()}
+                      aria-controls={`result-details-${result._id}`}
                       onClick={() =>
                         props.onExpandedResultChange(
                           expanded() ? null : result._id,
                         )
                       }
+                      onKeyDown={(event) => {
+                        if (event.key !== "Enter" && event.key !== " ") return;
+                        event.preventDefault();
+                        props.onExpandedResultChange(
+                          expanded() ? null : result._id,
+                        );
+                      }}
                     >
                       <td class="text-main">
                         <Show when={result.isPb === true}>
@@ -153,10 +167,13 @@ export function DesktopResultsTable(props: {
                       </td>
                     </tr>
                     <Show when={expanded()}>
-                      <tr class="resultDetails">
+                      <tr
+                        class="resultDetails"
+                        id={`result-details-${result._id}`}
+                      >
                         <td colSpan={8}>
                           <div class="grid gap-6 py-5 md:grid-cols-[1fr_2fr]">
-                            <div class="grid grid-cols-2 gap-x-6 gap-y-3 text-em-sm">
+                            <div class="grid grid-cols-2 content-start gap-x-6 gap-y-3 text-em-sm">
                               <Detail
                                 label="duration"
                                 value={`${result.testDuration.toFixed(1)}s`}
@@ -186,6 +203,13 @@ export function DesktopResultsTable(props: {
                               <Detail
                                 label="personal best"
                                 value={result.isPb === true ? "yes" : "no"}
+                              />
+                              <Button
+                                danger
+                                fa={{ icon: "fa-trash" }}
+                                text="delete result"
+                                class="col-span-2 mt-2"
+                                onClick={() => props.onDeleteResult(result._id)}
                               />
                             </div>
                             <Show

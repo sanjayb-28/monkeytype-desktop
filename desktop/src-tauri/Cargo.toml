@@ -1,6 +1,6 @@
 [package]
 name = "monkeytype-desktop"
-version = "0.3.0"
+version = "0.4.0"
 description = "A local-only macOS port of Monkeytype"
 authors = ["Sanjay Baskaran"]
 edition = "2021"
@@ -19,3 +19,4 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2", features = [] }
+rfd = { version = "0.17.2", default-features = false }

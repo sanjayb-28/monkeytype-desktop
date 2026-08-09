@@ -8,7 +8,8 @@ type FileDB = DBSchema & {
   };
 };
 
-type Filename = "LocalBackgroundFile" | "LocalFontFamilyFile";
+export type Filename = "LocalBackgroundFile" | "LocalFontFamilyFile";
+export type StoredFiles = Partial<Record<Filename, string>>;
 
 class FileStorage {
   private dbPromise: Promise<IDBPDatabase<FileDB>>;
@@ -77,6 +78,33 @@ class FileStorage {
 
   async hasFile(filename: Filename): Promise<boolean> {
     return (await this.getFile(filename)) !== undefined;
+  }
+
+  async getAllFiles(): Promise<StoredFiles> {
+    const files: StoredFiles = {};
+    for (const filename of await this.listFilenames()) {
+      files[filename] = await this.getFile(filename);
+    }
+    return files;
+  }
+
+  async replaceFiles(files: StoredFiles): Promise<void> {
+    const filenames: Filename[] = [
+      "LocalBackgroundFile",
+      "LocalFontFamilyFile",
+    ];
+    const db = await this.dbPromise;
+    const transaction = db.transaction("files", "readwrite");
+    for (const filename of filenames) {
+      const value = files[filename];
+      if (value === undefined) {
+        await transaction.store.delete(filename);
+      } else {
+        await transaction.store.put(value, filename);
+      }
+    }
+    await transaction.done;
+    for (const filename of filenames) this.notify(filename);
   }
 }
 

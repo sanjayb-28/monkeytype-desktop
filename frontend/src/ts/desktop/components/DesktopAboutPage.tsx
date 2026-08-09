@@ -35,8 +35,8 @@ export function DesktopAboutPage(): JSXElement {
           <H3 fa={{ icon: "fa-lock" }} text="offline by design" />
           <p>
             The app is packaged without web authentication, advertising,
-            telemetry, or update checks. Its native sandbox and content policy
-            also deny network connections.
+            telemetry, or update checks. Its content policy only permits bundled
+            app resources and local native file dialogs.
           </p>
         </section>
         <section>

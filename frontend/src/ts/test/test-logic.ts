@@ -87,8 +87,8 @@ import {
 } from "./funbox/list";
 import { getFunbox } from "@monkeytype/funbox";
 import * as CompositionState from "../legacy-states/composition";
-import { SnapshotResult } from "../constants/default-snapshot";
 import { WordGenError } from "../utils/word-gen-error";
+import { SnapshotResult } from "../constants/default-snapshot";
 import { tryCatch } from "@monkeytype/util/trycatch";
 import * as Sentry from "../sentry";
 import { showLoaderBar, hideLoaderBar } from "../states/loader-bar";
@@ -101,6 +101,7 @@ import { qs } from "../utils/dom";
 import { setAccountButtonSpinner } from "../states/header";
 import { Config } from "../config/store";
 import { envConfig } from "virtual:env-config";
+import { normalizeResult } from "../desktop/result-normalization";
 import { setQuoteLengthAll, toggleFunbox, setConfig } from "../config/setters";
 import {
   resetTestEvents,
@@ -1060,11 +1061,12 @@ export async function finish(difficultyFailed = false): Promise<void> {
         completedEvent.mode !== "quote" &&
         !completedEvent.bailedOut &&
         (previousPb === undefined || completedEvent.wpm > previousPb.wpm);
-      const localResult = structuredClone(
-        completedEvent,
-      ) as unknown as SnapshotResult<Mode>;
-      localResult._id = crypto.randomUUID();
-      localResult.isPb = isPb;
+      const localResult = normalizeResult({
+        ...structuredClone(completedEvent),
+        _id: crypto.randomUUID(),
+        isPb,
+        name: "local",
+      });
       desktopResult = { result: localResult, isPb };
     }
   } else if (user !== null) {
@@ -1111,8 +1113,12 @@ export async function finish(difficultyFailed = false): Promise<void> {
 
   await Promise.all([savingResultPromise, resultUpdatePromise]);
   if (desktopResult !== undefined) {
-    DB.saveLocalResult(desktopResult);
-    if (desktopResult.isPb) Result.showCrown("normal");
+    try {
+      await DB.saveLocalResult(desktopResult);
+      if (desktopResult.isPb) Result.showCrown("normal");
+    } catch (error) {
+      showErrorNotification("Failed to save this result locally", { error });
+    }
   }
 }
 
@@ -1251,7 +1257,7 @@ async function saveResult(
   if (isRetrying) {
     showSuccessNotification("Result saved", { important: true });
   }
-  DB.saveLocalResult(localDataToSave);
+  await DB.saveLocalResult(localDataToSave);
   return response;
 }
 

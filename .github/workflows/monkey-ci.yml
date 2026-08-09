@@ -28,6 +28,7 @@ jobs:
       should-build-be: ${{ steps.export-changes.outputs.should-build-be }}
       should-build-fe: ${{ steps.export-changes.outputs.should-build-fe }}
       should-build-pkg: ${{ steps.export-changes.outputs.should-build-pkg }}
+      should-build-desktop: ${{ steps.export-changes.outputs.should-build-desktop }}
       assets-or-styles: ${{ steps.export-changes.outputs.assets-or-styles }}
 
     steps:
@@ -52,6 +53,11 @@ jobs:
               - 'frontend/**/package.json'
             pkg-src:
               - 'packages/**/*'
+            desktop-src:
+              - 'desktop/**/*'
+              - 'frontend/**/*.{ts,tsx,js,scss,html}'
+              - 'frontend/**/package.json'
+              - 'packages/**/*'
             anti-cheat:
               - 'backend/**/anticheat/**'
 
@@ -65,6 +71,7 @@ jobs:
           echo "should-build-pkg=${{ steps.filter.outputs.pkg-src }}" >> $GITHUB_OUTPUT
           echo "should-build-be=${{ steps.filter.outputs.be-src }}" >> $GITHUB_OUTPUT
           echo "should-build-fe=${{ steps.filter.outputs.fe-src }}" >> $GITHUB_OUTPUT
+          echo "should-build-desktop=${{ steps.filter.outputs.desktop-src }}" >> $GITHUB_OUTPUT
           echo "assets-or-styles=${{ steps.filter.outputs.assets-or-styles }}" >> $GITHUB_OUTPUT
 
   prime-cache:
@@ -403,10 +410,64 @@ jobs:
       - name: Test
         run: npm run test-pkg
 
+  ci-desktop:
+    name: ci-desktop-macos-arm64
+    needs: [pre-ci, prime-cache]
+    runs-on: macos-15
+    if: needs.pre-ci.outputs.should-build-desktop == 'true' || contains(github.event.pull_request.labels.*.name, 'force-full-ci')
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Create stub Firebase config
+        working-directory: ./frontend/src/ts/constants
+        run: mv ./firebase-config-example.ts ./firebase-config.ts && cp ./firebase-config.ts ./firebase-config-live.ts
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Test desktop frontend
+        run: pnpm --dir frontend exec vitest run __tests__/desktop
+
+      - name: Lint desktop frontend
+        run: pnpm --dir frontend exec oxlint --type-aware --type-check --format agent src/ts/desktop
+
+      - name: Test and lint native shell
+        run: |
+          cargo test --manifest-path desktop/src-tauri/Cargo.toml --target aarch64-apple-darwin
+          cargo clippy --manifest-path desktop/src-tauri/Cargo.toml --target aarch64-apple-darwin -- -D warnings
+
+      - name: Build Apple Silicon app and DMG
+        run: pnpm --dir desktop build
+
+      - name: Verify architecture, signature, and offline policy
+        run: |
+          APP_PATH="desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/macos/Monkeytype.app"
+          file "$APP_PATH/Contents/MacOS/Monkeytype" | grep -q 'arm64'
+          codesign --verify --deep --strict --verbose=2 "$APP_PATH"
+          grep -q 'connect-src.*ipc:.*http://ipc.localhost' desktop/src-tauri/tauri.conf.json
+
+      - name: Upload unsigned desktop artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: monkeytype-desktop-macos-arm64
+          path: |
+            desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/macos/Monkeytype.app
+            desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
+
   on-failure:
     name: on-failure
     runs-on: ubuntu-latest
-    needs: [ci-be, ci-fe, ci-assets, ci-pkg, check-format]
+    needs: [ci-be, ci-fe, ci-assets, ci-pkg, ci-desktop, check-format]
     if: ${{ always() && contains(needs.*.result, 'failure') && github.ref != 'refs/heads/master' }}
     steps:
       - name: Save the PR number in an artifact

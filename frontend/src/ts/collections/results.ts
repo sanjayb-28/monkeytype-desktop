@@ -1,4 +1,3 @@
-import { ResultMinified } from "@monkeytype/schemas/results";
 import { Difficulty, Mode, Mode2 } from "@monkeytype/schemas/shared";
 import { ResultFilters } from "@monkeytype/schemas/users";
 import { queryCollectionOptions } from "@tanstack/query-db-collection";
@@ -41,6 +40,7 @@ import { getConfig } from "../config/store";
 import { getMode2 } from "../utils/misc";
 import { getCurrentQuote } from "../states/test";
 import { removeLanguageSize } from "../utils/strings";
+import { normalizeResult } from "../desktop/result-normalization";
 
 export type ResultsQueryState = {
   difficulty: SnapshotResult<Mode>["difficulty"][];
@@ -177,43 +177,6 @@ export function useResultsLiveQuery(options: {
       .orderBy(({ r }) => r[sorting.field], sorting.direction)
       .limit(limit);
   });
-}
-
-function normalizeResult(
-  result: ResultMinified | SnapshotResult<Mode>,
-  knownTagIds?: Set<string>,
-): SnapshotResult<Mode> {
-  const resultDate = new Date(result.timestamp);
-  resultDate.setSeconds(0);
-  resultDate.setMinutes(0);
-  resultDate.setHours(0);
-  resultDate.setMilliseconds(0);
-
-  //results strip default values, add them back
-  result.bailedOut ??= false;
-  result.blindMode ??= false;
-  result.lazyMode ??= false;
-  result.difficulty ??= "normal";
-  result.funbox ??= [];
-  result.language ??= "english";
-  result.numbers ??= false;
-  result.punctuation ??= false;
-  result.quoteLength ??= -1;
-  result.restartCount ??= 0;
-  result.incompleteTestSeconds ??= 0;
-  result.afkDuration ??= 0;
-
-  result.tags ??= [];
-  if (knownTagIds !== undefined) {
-    result.tags = result.tags.filter((tagId) => knownTagIds.has(tagId));
-  }
-  result.isPb ??= false;
-  return {
-    ...result,
-    timeTyping: calcTimeTyping(result),
-    words: Math.round((result.wpm / 60) * result.testDuration),
-    dayTimestamp: resultDate.getTime(),
-  } as SnapshotResult<Mode>;
 }
 
 const resultsCollection = createCollection(
@@ -536,30 +499,6 @@ function timestampFilter(val: ResultFilters["date"]): number {
 
   if (seconds === 0) return 0;
   return Math.floor(Date.now() - seconds * 1000);
-}
-
-function calcTimeTyping(result: ResultMinified): number {
-  let tt = 0;
-  if (
-    result.testDuration === undefined &&
-    result.mode2 !== "custom" &&
-    result.mode2 !== "zen"
-  ) {
-    //test finished before testDuration field was introduced - estimate
-    if (result.mode === "time") {
-      tt = parseInt(result.mode2);
-    } else if (result.mode === "words") {
-      tt = (parseInt(result.mode2) / result.wpm) * 60;
-    }
-  } else {
-    tt = parseFloat(result.testDuration as unknown as string); //legacy results could have a string here
-  }
-  if (result.incompleteTestSeconds !== undefined) {
-    tt += result.incompleteTestSeconds;
-  } else if (result.restartCount !== undefined && result.restartCount > 0) {
-    tt += (tt / 4) * result.restartCount;
-  }
-  return tt;
 }
 
 // oxlint-disable-next-line typescript/explicit-function-return-type

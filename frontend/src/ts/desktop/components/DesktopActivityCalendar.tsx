@@ -17,11 +17,29 @@ export function DesktopActivityCalendar(props: {
   selectedYear: number;
   years: number[];
 }): JSXElement {
+  const activitySummary = (): string => {
+    const activeDays = props.days.filter(
+      (day) => day.date.getFullYear() === props.selectedYear && day.count > 0,
+    );
+    const tests = activeDays.reduce((total, day) => total + day.count, 0);
+    const timeTyping = activeDays.reduce(
+      (total, day) => total + day.timeTyping,
+      0,
+    );
+    return `${props.selectedYear}: ${tests} completed tests across ${activeDays.length} active days, ${formatDuration(timeTyping)} typing time.`;
+  };
+
   return (
-    <section class="desktopActivityCalendar grid gap-4">
+    <section
+      class="desktopActivityCalendar grid gap-4"
+      aria-labelledby="desktop-activity-title"
+      aria-describedby="desktop-activity-summary"
+    >
       <div class="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <div class="text-xl text-text">activity</div>
+          <div class="text-xl text-text" id="desktop-activity-title">
+            activity
+          </div>
           <div class="text-em-xs text-sub">
             completed tests by local calendar day
           </div>
@@ -39,8 +57,12 @@ export function DesktopActivityCalendar(props: {
         </div>
       </div>
 
+      <div class="sr-only" id="desktop-activity-summary">
+        {activitySummary()}
+      </div>
+
       <div class="overflow-x-auto pb-2">
-        <div class="activityGrid" aria-label={`${props.selectedYear} activity`}>
+        <div class="activityGrid" aria-hidden="true">
           <For each={props.days}>
             {(day) => (
               <div
@@ -51,8 +73,7 @@ export function DesktopActivityCalendar(props: {
                     ? undefined
                     : "true"
                 }
-                aria-label={`${day.date.toLocaleDateString()}: ${day.count} tests, ${formatDuration(day.timeTyping)}`}
-                data-balloon-pos="up"
+                title={`${day.date.toLocaleDateString()}: ${day.count} tests, ${formatDuration(day.timeTyping)}`}
               ></div>
             )}
           </For>

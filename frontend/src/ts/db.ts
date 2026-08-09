@@ -37,7 +37,11 @@ import { fetchUserFromApi } from "./ape/user";
 import { SnapshotInitError } from "./utils/snapshot-init-error";
 import { updateTagsInFilterStorage } from "./states/result-filters";
 import { envConfig } from "virtual:env-config";
-import { loadDesktopData, saveDesktopData } from "./desktop/storage";
+import {
+  initializeDesktopStorage,
+  loadDesktopData,
+  saveDesktopData,
+} from "./desktop/storage";
 
 let dbSnapshot: Snapshot | undefined;
 const firstDayOfTheWeek = getFirstDayOfTheWeek();
@@ -78,12 +82,14 @@ export function setSnapshot(
   setSolidSnapshot(newSnapshot);
 
   if (envConfig.isDesktop && newSnapshot !== undefined) {
-    saveDesktopData({
+    void saveDesktopData({
       personalBests: newSnapshot.personalBests,
       typingStats: newSnapshot.typingStats,
       xp: newSnapshot.xp,
       streak: newSnapshot.streak,
       maxStreak: newSnapshot.maxStreak,
+    }).catch((error: unknown) => {
+      showErrorNotification("Failed to save local Monkeytype data", { error });
     });
   }
 }
@@ -93,6 +99,7 @@ export async function initSnapshot(): Promise<Snapshot | false> {
   const snap = getDefaultSnapshot();
 
   if (envConfig.isDesktop) {
+    await initializeDesktopStorage();
     const local = loadDesktopData();
     snap.name = "local";
     snap.uid = "local";
@@ -334,13 +341,15 @@ export type SaveLocalResultData = {
   isPb?: boolean;
 };
 
-export function saveLocalResult(data: SaveLocalResultData): void {
+export async function saveLocalResult(
+  data: SaveLocalResultData,
+): Promise<void> {
   const snapshot = getSnapshot();
   if (!snapshot) return;
 
   if (data.result !== undefined) {
     if (envConfig.isDesktop) {
-      saveDesktopData({ appendResult: data.result });
+      await saveDesktopData({ appendResult: data.result });
     }
     void insertLocalResult({ result: data.result });
     setLastResult(data.result);

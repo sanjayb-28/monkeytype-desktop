@@ -1,6 +1,7 @@
 import { ConfigSchema } from "@monkeytype/schemas/configs";
 import { FontNameSchema } from "@monkeytype/schemas/fonts";
 import { createResource, For, JSXElement, Show } from "solid-js";
+import { envConfig } from "virtual:env-config";
 import { z } from "zod";
 
 import {
@@ -48,8 +49,9 @@ export function FontFamily(): JSXElement {
           {configMetadata.fontFamily.description}
           <br />
           <div class="mt-2 text-em-xs">
-            Note: Local fonts are not sent to the server and will not persist
-            across devices.
+            {envConfig.isDesktop
+              ? "Local fonts stay on this Mac and are included in desktop backups."
+              : "Note: Local fonts are not sent to the server and will not persist across devices."}
           </div>
         </>
       }

@@ -1,9 +1,10 @@
 import { format as dateFormat } from "date-fns/format";
-import { For, type JSXElement, Show } from "solid-js";
+import { createSignal, For, type JSXElement, Show } from "solid-js";
 
 import type { PersonalBest } from "../dashboard";
 
 import { getFormatting } from "../../states/core";
+import { cn } from "../../utils/cn";
 
 const standardSlots = {
   time: ["15", "30", "60", "120"],
@@ -13,6 +14,8 @@ const standardSlots = {
 export function DesktopPersonalBests(props: {
   personalBests: PersonalBest[];
 }): JSXElement {
+  const [revealed, setRevealed] = createSignal<string | null>(null);
+
   return (
     <section class="grid gap-4">
       <div>
@@ -32,8 +35,25 @@ export function DesktopPersonalBests(props: {
                       (item) => item.mode === mode && item.mode2 === mode2,
                     );
                   return (
-                    <div class="desktopPbSlot group grid min-w-0 text-center">
-                      <div class="col-start-1 row-start-1 transition-opacity duration-125 group-hover:opacity-0">
+                    <button
+                      type="button"
+                      class="desktopPbSlot group grid min-w-0 rounded text-center focus-visible:ring-2 focus-visible:ring-main focus-visible:outline-none"
+                      aria-label={`${mode2} ${mode === "time" ? "seconds" : "words"} personal best details`}
+                      aria-pressed={revealed() === `${mode}:${mode2}`}
+                      onClick={() =>
+                        setRevealed((current) =>
+                          current === `${mode}:${mode2}`
+                            ? null
+                            : `${mode}:${mode2}`,
+                        )
+                      }
+                    >
+                      <div
+                        class={cn(
+                          "col-start-1 row-start-1 transition-opacity duration-125 group-hover:opacity-0 group-focus:opacity-0",
+                          revealed() === `${mode}:${mode2}` && "opacity-0",
+                        )}
+                      >
                         <div class="truncate text-em-xs text-sub">
                           {mode2} {mode === "time" ? "seconds" : "words"}
                         </div>
@@ -52,7 +72,12 @@ export function DesktopPersonalBests(props: {
                               })}
                         </div>
                       </div>
-                      <div class="col-start-1 row-start-1 grid content-center bg-sub-alt text-em-xs opacity-0 transition-opacity duration-125 group-hover:opacity-100">
+                      <div
+                        class={cn(
+                          "col-start-1 row-start-1 grid content-center bg-sub-alt text-em-xs opacity-0 transition-opacity duration-125 group-hover:opacity-100 group-focus:opacity-100",
+                          revealed() === `${mode}:${mode2}` && "opacity-100",
+                        )}
+                      >
                         <Show
                           when={pb()}
                           fallback={<span class="text-sub">no result</span>}
@@ -75,7 +100,7 @@ export function DesktopPersonalBests(props: {
                           )}
                         </Show>
                       </div>
-                    </div>
+                    </button>
                   );
                 }}
               </For>

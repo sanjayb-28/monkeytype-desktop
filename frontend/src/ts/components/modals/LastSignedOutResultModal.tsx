@@ -182,7 +182,7 @@ async function syncLastSignedOutResult(): Promise<void> {
   if (response.body.data.isPb) {
     result.isPb = true;
   }
-  saveLocalResult(dataToSave);
+  await saveLocalResult(dataToSave);
   setLastSignedOutResult(null);
   showSuccessNotification(
     `Last test result saved ${response.body.data.isPb ? `(new pb!)` : ""}`,

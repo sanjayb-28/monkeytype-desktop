@@ -25,6 +25,8 @@ export function DesktopHeader(): JSXElement {
           router-link
           href="/"
           class={buttonClass()}
+          active={getActivePage() === "test"}
+          balloon={{ text: "typing test", position: "down" }}
           onClick={() => {
             if (getActivePage() === "test") restartTestEvent.dispatch();
           }}
@@ -35,6 +37,7 @@ export function DesktopHeader(): JSXElement {
           router-link
           href="/account"
           class={buttonClass()}
+          active={getActivePage() === "account"}
           balloon={{ text: "local activity", position: "down" }}
         />
         <Button
@@ -43,6 +46,8 @@ export function DesktopHeader(): JSXElement {
           router-link
           href="/about"
           class={buttonClass()}
+          active={getActivePage() === "about"}
+          balloon={{ text: "about", position: "down" }}
         />
         <Button
           variant="text"
@@ -50,6 +55,8 @@ export function DesktopHeader(): JSXElement {
           router-link
           href="/settings"
           class={buttonClass()}
+          active={getActivePage() === "settings"}
+          balloon={{ text: "settings", position: "down" }}
         />
         <div class="grow"></div>
         <div class="px-2 text-em-xs text-sub">offline</div>

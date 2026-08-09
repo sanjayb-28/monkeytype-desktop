@@ -13,7 +13,16 @@ import { Button } from "../../components/common/Button";
 import { H2 } from "../../components/common/Headers";
 import { Page } from "../../components/common/Page";
 import { getConfig } from "../../config/store";
-import { showNoticeNotification } from "../../states/notifications";
+import {
+  showErrorNotification,
+  showSuccessNotification,
+} from "../../states/notifications";
+import { showSimpleModal } from "../../states/simple-modal";
+import {
+  createDesktopBackup,
+  parseDesktopBackup,
+  restoreDesktopBackup,
+} from "../backup";
 import {
   buildActivityCalendar,
   calculateDashboardStats,
@@ -22,11 +31,16 @@ import {
   type DashboardSort,
   defaultDashboardFilters,
   filterDashboardResults,
-  getPersonalBests,
+  getStoredPersonalBests,
   resultsToCsv,
   sortDashboardResults,
 } from "../dashboard";
-import { loadDesktopData } from "../storage";
+import { openTextFile, saveTextFile } from "../native-files";
+import {
+  clearDesktopData,
+  deleteDesktopResult,
+  loadDesktopData,
+} from "../storage";
 import { DesktopActivityCalendar } from "./DesktopActivityCalendar";
 import { DesktopDashboardCharts } from "./DesktopDashboardCharts";
 import { DesktopPersonalBests } from "./DesktopPersonalBests";
@@ -59,15 +73,6 @@ const formatDuration = (seconds: number): string => {
 
 const formatNumber = (value: number): string =>
   new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(value);
-
-function downloadLocalFile(name: string, contents: string, type: string): void {
-  const url = URL.createObjectURL(new Blob([contents], { type }));
-  const anchor = document.createElement("a");
-  anchor.download = name;
-  anchor.href = url;
-  anchor.click();
-  URL.revokeObjectURL(url);
-}
 
 export function DesktopAccountPage(): JSXElement {
   const [data, setData] = createSignal(loadDesktopData());
@@ -121,7 +126,89 @@ export function DesktopAccountPage(): JSXElement {
   const calendar = createMemo(() =>
     buildActivityCalendar(allResults(), selectedYear()),
   );
-  const personalBests = createMemo(() => getPersonalBests(allResults()));
+  const personalBests = createMemo(() =>
+    getStoredPersonalBests(data().personalBests),
+  );
+
+  const exportCsv = async (): Promise<void> => {
+    try {
+      const saved = await saveTextFile(
+        "monkeytype-results.csv",
+        resultsToCsv(allResults()),
+        "text/csv;charset=utf-8",
+      );
+      if (saved) showSuccessNotification("Local results exported");
+    } catch (error) {
+      showErrorNotification("Failed to export local results", { error });
+    }
+  };
+
+  const exportBackup = async (): Promise<void> => {
+    try {
+      const saved = await saveTextFile(
+        "monkeytype-desktop-backup.json",
+        await createDesktopBackup(),
+        "application/json",
+      );
+      if (saved) showSuccessNotification("Local backup exported");
+    } catch (error) {
+      showErrorNotification("Failed to export local backup", { error });
+    }
+  };
+
+  const chooseBackup = async (): Promise<void> => {
+    try {
+      const serialized = await openTextFile();
+      if (serialized === null) return;
+      parseDesktopBackup(serialized);
+      showSimpleModal({
+        title: "restore local backup",
+        text: "This replaces the current history, personal bests, settings, local font, and local background. Export a backup first if you need the current data.",
+        buttonText: "restore",
+        execFn: async () => {
+          await restoreDesktopBackup(serialized);
+          return {
+            status: "success",
+            message: "Backup restored",
+            afterHide: () => window.location.reload(),
+          };
+        },
+      });
+    } catch (error) {
+      showErrorNotification("Failed to read local backup", { error });
+    }
+  };
+
+  const confirmClearHistory = (): void => {
+    showSimpleModal({
+      title: "clear local typing data",
+      text: "This permanently removes every result, personal best, and typing statistic from this Mac. Settings and custom appearance files stay unchanged.",
+      buttonText: "clear",
+      execFn: async () => {
+        await clearDesktopData();
+        return {
+          status: "success",
+          message: "Local typing data cleared",
+          afterHide: () => window.location.reload(),
+        };
+      },
+    });
+  };
+
+  const confirmDeleteResult = (resultId: string): void => {
+    showSimpleModal({
+      title: "delete local result",
+      text: "This permanently removes this result and recalculates local personal bests and typing statistics.",
+      buttonText: "delete",
+      execFn: async () => {
+        await deleteDesktopResult(resultId);
+        return {
+          status: "success",
+          message: "Local result deleted",
+        };
+      },
+    });
+  };
 
   const updateFilters = (update: Partial<DashboardFilters>): void => {
     setFilters((current) => ({ ...current, ...update }));
@@ -169,26 +256,17 @@ export function DesktopAccountPage(): JSXElement {
               fa={{ icon: "fa-file-csv" }}
               text="export CSV"
               disabled={allResults().length === 0}
-              onClick={() => {
-                downloadLocalFile(
-                  "monkeytype-results.csv",
-                  resultsToCsv(allResults()),
-                  "text/csv;charset=utf-8",
-                );
-                showNoticeNotification("Local results exported");
-              }}
+              onClick={() => void exportCsv()}
             />
             <Button
               fa={{ icon: "fa-download" }}
-              text="backup JSON"
-              onClick={() => {
-                downloadLocalFile(
-                  "monkeytype-desktop-backup.json",
-                  JSON.stringify(data(), null, 2),
-                  "application/json",
-                );
-                showNoticeNotification("Local backup exported");
-              }}
+              text="export backup"
+              onClick={() => void exportBackup()}
+            />
+            <Button
+              fa={{ icon: "fa-upload" }}
+              text="restore backup"
+              onClick={() => void chooseBackup()}
             />
           </div>
         </div>
@@ -390,12 +468,30 @@ export function DesktopAccountPage(): JSXElement {
               hasMore={tableResults().length > visibleResults()}
               onExpandedResultChange={setExpandedResultId}
               onLoadMore={() => setVisibleResults((current) => current + 25)}
+              onDeleteResult={confirmDeleteResult}
               onSortingChange={setSorting}
               results={tableResults().slice(0, visibleResults())}
               sorting={sorting()}
             />
           </section>
         </Show>
+
+        <section class="grid gap-3 border-t border-sub pt-8">
+          <div>
+            <div class="text-xl text-text">local data</div>
+            <div class="text-em-xs text-sub">
+              Back up your data before clearing it. Deleted history cannot be
+              recovered.
+            </div>
+          </div>
+          <Button
+            fa={{ icon: "fa-trash" }}
+            text="clear typing data"
+            disabled={allResults().length === 0}
+            class="justify-self-start"
+            onClick={confirmClearHistory}
+          />
+        </section>
       </div>
     </Page>
   );

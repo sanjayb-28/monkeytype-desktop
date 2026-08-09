@@ -1,6 +1,19 @@
 import { envConfig } from "virtual:env-config";
 import { qs } from "../utils/dom";
 
+if (envConfig.isDesktop) {
+  qs("#nocss")?.setHtml(`
+    <div style="display:grid;max-width:800px;gap:1rem">
+      <span style="font-size:6rem;color:#e2b714">:(</span>
+      <span style="font-size:1.5rem;color:#d1d0c5">
+        Monkeytype Desktop could not load its interface.
+      </span>
+      <span>Quit and reopen the app. If the problem continues, reinstall the latest Apple Silicon build. Your local data remains in the app container.</span>
+      <span class="requestedJs"></span>
+    </div>
+  `);
+}
+
 qs("#nocss .requestedStylesheets")?.setHtml(
   `Requested stylesheets:<br>${(
     [...document.querySelectorAll("link[rel=stylesheet")] as HTMLAnchorElement[]

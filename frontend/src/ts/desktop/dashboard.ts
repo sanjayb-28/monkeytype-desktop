@@ -1,4 +1,4 @@
-import type { Mode } from "@monkeytype/schemas/shared";
+import type { Mode, PersonalBests } from "@monkeytype/schemas/shared";
 
 import type { SnapshotResult } from "../constants/default-snapshot";
 
@@ -76,6 +76,12 @@ const startOfLocalDay = (timestamp: number): number => {
   return date.getTime();
 };
 
+const subtractLocalDays = (timestamp: number, days: number): number => {
+  const date = new Date(startOfLocalDay(timestamp));
+  date.setDate(date.getDate() - days);
+  return date.getTime();
+};
+
 export function filterDashboardResults(
   results: SnapshotResult<Mode>[],
   filters: DashboardFilters,
@@ -90,8 +96,7 @@ export function filterDashboardResults(
   const cutoff =
     filters.range === "all"
       ? 0
-      : startOfLocalDay(now) -
-        (rangeDays[filters.range] - 1) * 24 * 60 * 60 * 1000;
+      : subtractLocalDays(now, rangeDays[filters.range] - 1);
 
   return results.filter(
     (result) =>
@@ -241,6 +246,28 @@ export function getPersonalBests(
     });
   }
   return [...bests.values()];
+}
+
+export function getStoredPersonalBests(stored: PersonalBests): PersonalBest[] {
+  const bests: PersonalBest[] = [];
+  for (const mode of ["time", "words"] as const) {
+    for (const [mode2, candidates] of Object.entries(stored[mode])) {
+      const best = [...candidates].sort(
+        (left, right) => right.wpm - left.wpm,
+      )[0];
+      if (best === undefined) continue;
+      bests.push({
+        acc: best.acc,
+        consistency: best.consistency,
+        mode,
+        mode2,
+        rawWpm: best.raw,
+        timestamp: best.timestamp,
+        wpm: best.wpm,
+      });
+    }
+  }
+  return bests;
 }
 
 const csvEscape = (

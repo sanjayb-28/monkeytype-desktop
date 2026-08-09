@@ -15,8 +15,9 @@ export function DesktopFooter(): JSXElement {
     >
       <Keytips />
       <div
-        class="flex justify-between transition-opacity"
-        classList={{ "opacity-0": getFocus() }}
+        class={cn("flex justify-between transition-opacity", {
+          "opacity-0": getFocus(),
+        })}
       >
         <span>local-only macOS app</span>
         <ThemeIndicator />
