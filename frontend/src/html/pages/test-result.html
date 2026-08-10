@@ -29,7 +29,7 @@
       <div class="group testType">
         <div class="top">test type</div>
         <div class="bottom">-</div>
-        <div class="tags hidden" style="margin-top: 0.5rem">
+        <div class="tags resultTags hidden">
           <div class="top">
             <span>tags</span>
             <div
@@ -101,7 +101,7 @@
 
       <div class="group source hidden">
         <div class="top">
-          <span style="margin-right: 0.5em">source</span>
+          <span class="sourceLabel">source</span>
           <span
             id="reportQuoteButton"
             class="textButton hidden"
@@ -168,10 +168,9 @@
           <span>input history</span>
           <button
             id="copyWordsListButton"
-            class="textButton"
+            class="textButton resultInlineButton"
             aria-label="Copy words list"
             data-balloon-pos="up"
-            style="display: inline-block"
             tabindex="-1"
           >
             <i class="fas fa-fw fa-align-left"></i>
@@ -187,10 +186,9 @@
           </button>
           <button
             id="toggleBurstHeatmap"
-            class="textButton"
+            class="textButton resultInlineButton"
             aria-label="Toggle burst heatmap"
             data-balloon-pos="up"
-            style="display: inline-block"
             tabindex="-1"
           >
             <i class="fas fa-fw fa-fire-alt"></i>
@@ -212,10 +210,9 @@
           watch replay
           <button
             id="playpauseReplayButton"
-            class="textButton"
+            class="textButton resultInlineButton"
             aria-label="Start replay"
             data-balloon-pos="up"
-            style="display: inline-block"
             tabindex="-1"
           >
             <i class="fas fa-play"></i>
@@ -303,7 +300,7 @@
     </div>
     <div class="ssWatermark hidden">monkeytype.com</div>
   </div>
-  <div class="full-width" style="margin-top: 1rem">
+  <div class="full-width resultAdContainer">
     <div id="ad-result-wrapper" class="ad full-width advertisement ad-h">
       <div class="iconAndText">
         <div class="icon"><i class="fas fa-ad"></i></div>

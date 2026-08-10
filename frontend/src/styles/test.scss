@@ -141,6 +141,10 @@
         }
       }
 
+      &.inputHidden {
+        opacity: 0;
+      }
+
       &.debugCaret {
         outline: 1px solid var(--sub-color);
       }
@@ -607,6 +611,29 @@
 }
 
 #result {
+  .resultTags {
+    margin-top: 0.5rem;
+  }
+
+  .sourceLabel {
+    margin-right: 0.5em;
+  }
+
+  .resultInlineButton {
+    display: inline-block;
+  }
+
+  .resultAdContainer {
+    margin-top: 1rem;
+  }
+
+  .noStressMessage {
+    text-align: center;
+    grid-column: 1/3;
+    font-size: 2rem;
+    padding-bottom: 2rem;
+  }
+
   &:focus-visible {
     outline: none;
   }

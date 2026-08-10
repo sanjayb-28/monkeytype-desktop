@@ -79,6 +79,12 @@
     div {
       width: 100%;
       text-align: center;
+
+      @for $weeks from 1 through 6 {
+        &[data-weeks="#{$weeks}"] {
+          grid-column: span $weeks;
+        }
+      }
     }
     font-size: var(--font-size);
   }

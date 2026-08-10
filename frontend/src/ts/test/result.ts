@@ -1016,16 +1016,9 @@ export async function update(
   if (GlarsesMode.get()) {
     qs("main #result .noStressMessage")?.remove();
     qs("main #result")?.prependHtml(`
-
-      <div class='noStressMessage' style="
-        text-align: center;
-        grid-column: 1/3;
-        font-size: 2rem;
-        padding-bottom: 2rem;
-      ">
+      <div class="noStressMessage">
       <i class="fas fa-check"></i>
       </div>
-
     `);
     qsa("main #result .stats")?.hide();
     qs("main #result .chart")?.hide();

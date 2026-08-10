@@ -70,10 +70,7 @@ function updateMonths(months: TestActivityMonth[]): void {
   }
 
   element.innerHTML = months
-    .map(
-      (month) =>
-        `<div style="grid-column: span ${month.weeks}">${month.text}</div>`,
-    )
+    .map((month) => `<div data-weeks="${month.weeks}">${month.text}</div>`)
     .join("");
 }
 

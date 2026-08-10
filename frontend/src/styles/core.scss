@@ -120,6 +120,10 @@ main {
   display: grid; //stupid fix for stupid safari
 }
 
+main.appMain {
+  height: 100%;
+}
+
 #nocss {
   display: none !important;
   pointer-events: none;

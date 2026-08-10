@@ -502,11 +502,6 @@ async function showCommands(): Promise<void> {
       firstActive = index;
     }
 
-    let customStyle = "";
-    if (command.customStyle !== undefined && command.customStyle !== "") {
-      customStyle = command.customStyle;
-    }
-
     const { iconHtml, configIconHtml } = getCommandIconsHtml(command);
 
     let display = command.display;
@@ -536,43 +531,25 @@ async function showCommands(): Promise<void> {
       if (command.id.startsWith("changeTheme")) {
         html += `<div class="command changeThemeCommand" data-command-id="${
           command.id
-        }" data-index="${index}" style="${customStyle}">
+        }" data-index="${index}">
       <div class="icon">${finalIconHtml}</div><div>${display}</div>
       <div class="themeFavIcon ${
         command.customData["isFavorite"] === true ? "" : "hidden"
       }">
         <i class="fas fa-star"></i>
       </div>
-      <div class="themeBubbles" style="background: ${
-        command.customData["bg"]
-      };outline: 0.25rem solid ${command.customData["bg"]};">
-        <div class="themeBubble" style="background: ${
-          command.customData["main"]
-        }"></div>
-        <div class="themeBubble" style="background: ${
-          command.customData["sub"]
-        }"></div>
-        <div class="themeBubble" style="background: ${
-          command.customData["text"]
-        }"></div>
+      <div class="themeBubbles">
+        <div class="themeBubble"></div>
+        <div class="themeBubble"></div>
+        <div class="themeBubble"></div>
       </div>
       </div>`;
       }
       if (command.id.startsWith("setFontFamily")) {
-        let fontFamily = command.customData["name"];
-
-        if (fontFamily === "Helvetica") {
-          fontFamily = "Comic Sans MS";
-        }
-
-        if (command.customData["isSystem"] === false) {
-          fontFamily += " Preview";
-        }
-
-        html += `<div class="command" data-command-id="${command.id}" data-index="${index}" style="font-family: '${fontFamily}'"><div class="icon">${finalIconHtml}</div><div>${display}</div></div>`;
+        html += `<div class="command" data-command-id="${command.id}" data-index="${index}"><div class="icon">${finalIconHtml}</div><div>${display}</div></div>`;
       }
     } else {
-      html += `<div class="command" data-command-id="${command.id}" data-index="${index}" style="${customStyle}"><div class="icon">${finalIconHtml}</div><div>${display}</div></div>`;
+      html += `<div class="command" data-command-id="${command.id}" data-index="${index}"><div class="icon">${finalIconHtml}</div><div>${display}</div></div>`;
     }
     index++;
   }
@@ -581,6 +558,48 @@ async function showCommands(): Promise<void> {
   }
 
   element.innerHTML = html;
+
+  for (const [commandIndex, command] of list.entries()) {
+    const commandElement = element.querySelector<HTMLElement>(
+      `.command[data-index="${commandIndex}"]`,
+    );
+    if (commandElement === null) continue;
+
+    if (command.customStyle !== undefined && command.customStyle !== "") {
+      commandElement.style.cssText = command.customStyle;
+    }
+
+    if (command.customData === undefined) continue;
+
+    if (command.id.startsWith("changeTheme")) {
+      const background = String(command.customData["bg"]);
+      const bubbles =
+        commandElement.querySelector<HTMLElement>(".themeBubbles");
+      if (bubbles !== null) {
+        bubbles.style.background = background;
+        bubbles.style.outline = `0.25rem solid ${background}`;
+      }
+
+      const colors = ["main", "sub", "text"] as const;
+      const bubbleElements =
+        commandElement.querySelectorAll<HTMLElement>(".themeBubble");
+      colors.forEach((color, colorIndex) => {
+        const bubble = bubbleElements.item(colorIndex);
+        if (bubble !== null) {
+          bubble.style.background = String(command.customData?.[color]);
+        }
+      });
+    }
+
+    if (command.id.startsWith("setFontFamily")) {
+      let fontFamily = String(command.customData["name"]);
+      if (fontFamily === "Helvetica") fontFamily = "Comic Sans MS";
+      if (command.customData["isSystem"] === false) {
+        fontFamily += " Preview";
+      }
+      commandElement.style.fontFamily = fontFamily;
+    }
+  }
 }
 
 async function updateActiveCommand(): Promise<void> {
@@ -875,17 +894,6 @@ const modal = new AnimatedModal({
   },
   setup: async (modalEl): Promise<void> => {
     const input = modalEl.qsr("input");
-
-    document.addEventListener(
-      "keydown",
-      (e) => {
-        if (e.key !== "Escape" || !isModalOpen(MODAL_STORE_ID)) return;
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        void goBackOrHide();
-      },
-      true,
-    );
 
     input.on(
       "input",
