@@ -1,5 +1,6 @@
 import { TestActivity } from "@monkeytype/schemas/users";
 import { createEffect, createSignal, JSXElement, Show } from "solid-js";
+import { envConfig } from "virtual:env-config";
 
 import { get as getSeverConfiguration } from "../../../ape/server-configuration";
 import { getSnapshot, getTestActivityCalendar } from "../../../db";
@@ -77,6 +78,7 @@ export function ActivityCalendar(props: {
     for (let year = currentYear; year >= startYear; year--) {
       if (
         years.length < 2 ||
+        envConfig.isDesktop ||
         (getSeverConfiguration()?.users.premium.enabled &&
           getSnapshot()?.isPremium)
       ) {

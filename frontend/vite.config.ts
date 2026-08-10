@@ -372,6 +372,10 @@ export default defineConfig(({ mode }): UserConfig => {
       alias: isDesktop
         ? [
             {
+              find: /^animejs$/,
+              replacement: path.resolve(__dirname, "src/ts/desktop/anime.ts"),
+            },
+            {
               find: /^.*\/controllers\/ad-controller$/,
               replacement: path.resolve(
                 __dirname,

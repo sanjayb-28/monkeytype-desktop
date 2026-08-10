@@ -227,9 +227,9 @@ function createHintsHtml(
         ? inputChars[letterIndex]
         : inputChars[currentHint++];
 
-      hintsHtml += `<hint data-chars-index=${blockIndices} style="left:${
+      hintsHtml += `<hint data-chars-index=${blockIndices} data-left="${
         letter.getOffsetLeft() + letter.getOffsetWidth() / 2
-      }px;">${blockChars}</hint>`;
+      }">${blockChars}</hint>`;
     }
   }
   if (wrapWithDiv) hintsHtml = `<div class="hints">${hintsHtml}</div>`;
@@ -772,10 +772,10 @@ export async function updateWordLetters({
       if (Config.mode === "zen") {
         for (const char of input) {
           if (char === "\t") {
-            ret += `<letter class='tabChar correct' style="opacity: 0"><i class="fas fa-long-arrow-alt-right fa-fw"></i></letter>`;
+            ret += `<letter class="tabChar correct inputHidden"><i class="fas fa-long-arrow-alt-right fa-fw"></i></letter>`;
           } else if (char === "\n") {
             newlineafter = true;
-            ret += `<letter class='nlChar correct' style="opacity: 0"><i class="fas fa-level-down-alt fa-rotate-90 fa-fw"></i></letter>`;
+            ret += `<letter class="nlChar correct inputHidden"><i class="fas fa-level-down-alt fa-rotate-90 fa-fw"></i></letter>`;
           } else {
             ret += `<letter class="correct">${char}</letter>`;
           }
@@ -892,6 +892,11 @@ export async function updateWordLetters({
         }
         wordAtIndex.appendHtml(hintsHtml);
         const hintElements = wordAtIndex.native.getElementsByTagName("hint");
+        for (const hintElement of hintElements) {
+          const hint = hintElement as HTMLElement;
+          hint.style.left = `${hint.dataset["left"] ?? "0"}px`;
+          delete hint.dataset["left"];
+        }
         await joinOverlappingHints(
           hintIndices,
           wordAtIndexLetters,

@@ -11,6 +11,12 @@
     padding: 0;
     display: block;
 
+    .searchInput {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      align-items: center;
+    }
+
     .searchicon {
       color: var(--sub-color);
       margin: 1px 1rem 0 1rem;

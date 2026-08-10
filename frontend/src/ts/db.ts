@@ -42,7 +42,10 @@ import {
   loadDesktopData,
   saveDesktopData,
 } from "./desktop/storage";
-import { buildDesktopTestActivity } from "./desktop/activity";
+import {
+  buildDesktopTestActivity,
+  buildDesktopTestActivityForYear,
+} from "./desktop/activity";
 
 let dbSnapshot: Snapshot | undefined;
 const firstDayOfTheWeek = getFirstDayOfTheWeek();
@@ -485,6 +488,12 @@ export async function getTestActivityCalendar(
   const currentYear = new Date().getFullYear().toString();
   if (yearString === currentYear) {
     return dbSnapshot.testActivity?.getFullYearCalendar();
+  }
+
+  if (envConfig.isDesktop) {
+    const year = Number.parseInt(yearString, 10);
+    if (!Number.isInteger(year)) return undefined;
+    return buildDesktopTestActivityForYear(loadDesktopData().results, year);
   }
 
   if (dbSnapshot.testActivityByYear === undefined) {
