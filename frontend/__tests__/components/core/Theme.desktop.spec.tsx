@@ -52,11 +52,13 @@ describe("Theme component in the desktop WebView", () => {
 
   it("writes theme variables directly and manages the theme stylesheet", () => {
     render(() => <Theme />);
-    vi.runAllTimers();
 
     expect(document.documentElement.style.getPropertyValue("--bg-color")).toBe(
       "#000",
     );
+    expect(
+      document.documentElement.style.getPropertyPriority("--main-color"),
+    ).toBe("important");
     expect(
       document.head.querySelector("link#currentTheme")?.getAttribute("href"),
     ).toBe("/themes/dark.css");
@@ -66,11 +68,13 @@ describe("Theme component in the desktop WebView", () => {
       name: "serika",
       bg: "#f00",
     });
-    vi.runAllTimers();
 
     expect(document.documentElement.style.getPropertyValue("--bg-color")).toBe(
       "#f00",
     );
+    expect(
+      document.documentElement.style.getPropertyPriority("--bg-color"),
+    ).toBe("important");
     expect(document.head.querySelector("link#currentTheme")).toBeNull();
   });
 });
