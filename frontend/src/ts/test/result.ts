@@ -624,8 +624,8 @@ async function resultCanGetPb(): Promise<CanGetPbObject> {
   }
 }
 
-export function showConfetti(): void {
-  if (SlowTimer.get()) return;
+export function showConfetti(options?: { ignoreSlowTimer?: boolean }): void {
+  if (SlowTimer.get() && options?.ignoreSlowTimer !== true) return;
   const style = getComputedStyle(document.body);
   const colors = [
     style.getPropertyValue("--main-color"),
