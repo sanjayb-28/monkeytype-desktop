@@ -8,11 +8,19 @@ const frontendRoot = process.cwd().endsWith("/frontend")
   : resolve(process.cwd(), "frontend");
 
 describe("desktop result effect parity", () => {
-  it("keeps the original confetti renderer wired to validated local PBs", async () => {
-    const [resultSource, testLogicSource] = await Promise.all([
-      readFile(resolve(frontendRoot, "src/ts/test/result.ts"), "utf8"),
-      readFile(resolve(frontendRoot, "src/ts/test/test-logic.ts"), "utf8"),
-    ]);
+  it("keeps the original confetti renderer and its worker permission wired to validated local PBs", async () => {
+    const [resultSource, testLogicSource, tauriConfigSource] =
+      await Promise.all([
+        readFile(resolve(frontendRoot, "src/ts/test/result.ts"), "utf8"),
+        readFile(resolve(frontendRoot, "src/ts/test/test-logic.ts"), "utf8"),
+        readFile(
+          resolve(frontendRoot, "../desktop/src-tauri/tauri.conf.json"),
+          "utf8",
+        ),
+      ]);
+    const tauriConfig = JSON.parse(tauriConfigSource) as {
+      app: { security: { csp: Record<string, string> } };
+    };
 
     expect(resultSource).toContain('import confetti from "canvas-confetti";');
     expect(resultSource).toContain(
@@ -22,6 +30,11 @@ describe("desktop result effect parity", () => {
     expect(testLogicSource).toContain(
       "Result.showConfetti({ ignoreSlowTimer: true });",
     );
+    // canvas-confetti uses a Blob-backed worker when WebKit supports
+    // OffscreenCanvas. Without this narrow CSP directive its renderer is
+    // blocked in the packaged app even though the PB path was reached.
+    expect(tauriConfig.app.security.csp["worker-src"]).toBe("'self' blob:");
+    expect(tauriConfig.app.security.csp["script-src"]).toBe("'self'");
   });
 
   it("shows the original PB crown only after the local result is saved", async () => {
