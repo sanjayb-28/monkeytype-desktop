@@ -7,4 +7,10 @@ body.desktop {
   .desktopDashboard {
     padding-bottom: 4rem;
   }
+
+  // WebKit does not consistently honor the web app's `visible clip`
+  // overflow shorthand. Keep the measured three-line test viewport clipped.
+  .pageTest #wordsWrapper:not(.tape) {
+    overflow: hidden;
+  }
 }
