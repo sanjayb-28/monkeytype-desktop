@@ -25,6 +25,21 @@ describe("desktop Anime.js scheduler", () => {
     expect(onComplete).toHaveBeenCalledOnce();
   });
 
+  it("uses the native animation-frame clock instead of a fixed 60 Hz ticker", () => {
+    const requestAnimationFrame = vi.spyOn(window, "requestAnimationFrame");
+    const element = document.createElement("div");
+    document.body.append(element);
+
+    animate(element, {
+      opacity: [0, 1],
+      duration: 125,
+      ease: "linear",
+    });
+
+    expect(requestAnimationFrame).toHaveBeenCalled();
+    requestAnimationFrame.mockRestore();
+  });
+
   it("restarts the scheduler after a completed animation", async () => {
     const element = document.createElement("div");
     document.body.append(element);
