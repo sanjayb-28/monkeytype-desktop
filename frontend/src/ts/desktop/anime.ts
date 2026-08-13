@@ -14,30 +14,73 @@ type DesktopEngine = typeof engine & {
 };
 
 const desktopEngine = engine as DesktopEngine;
-let tickTimer: number | undefined;
+const fallbackFrameInterval = 1000 / 60;
+const stalledAnimationFrameThreshold = 125;
+
+let animationFrameId: number | undefined;
+let fallbackTimer: number | undefined;
+let lastAnimationFrameAt = 0;
 
 function stopTicker(): void {
-  if (tickTimer === undefined) return;
-  window.clearInterval(tickTimer);
-  tickTimer = undefined;
+  if (animationFrameId !== undefined) {
+    window.cancelAnimationFrame(animationFrameId);
+    animationFrameId = undefined;
+  }
+  if (fallbackTimer !== undefined) {
+    window.clearInterval(fallbackTimer);
+    fallbackTimer = undefined;
+  }
+}
+
+function updateEngine(): void {
+  engine.update();
+  if (desktopEngine._head === null) stopTicker();
+}
+
+function scheduleAnimationFrame(): void {
+  animationFrameId = window.requestAnimationFrame((timestamp) => {
+    animationFrameId = undefined;
+    lastAnimationFrameAt = timestamp;
+    updateEngine();
+
+    if (desktopEngine._head !== null) scheduleAnimationFrame();
+  });
 }
 
 function wakeDesktopEngine(): typeof engine {
   engine.paused = false;
-  if (tickTimer !== undefined) return engine;
+  if (animationFrameId !== undefined || fallbackTimer !== undefined) {
+    return engine;
+  }
 
-  tickTimer = window.setInterval(() => {
-    engine.update();
-    if (desktopEngine._head === null) stopTicker();
-  }, 1000 / 60);
+  // Prefer the browser compositor's own cadence. On the user's 100 Hz macOS
+  // display this keeps desktop animations in lock-step with the web app instead
+  // of capping them at 60 Hz.
+  lastAnimationFrameAt = performance.now();
+  updateEngine();
+  if (desktopEngine._head === null) return engine;
+
+  scheduleAnimationFrame();
+
+  // WKWebView can occasionally stop delivering animation frames while the
+  // window remains visible. Retain the previous 60 Hz timer only as a watchdog
+  // for that failure mode; it never competes with a healthy rAF loop.
+  fallbackTimer = window.setInterval(() => {
+    if (
+      performance.now() - lastAnimationFrameAt <
+      stalledAnimationFrameThreshold
+    ) {
+      return;
+    }
+    updateEngine();
+  }, fallbackFrameInterval);
 
   return engine;
 }
 
-// Anime.js' requestAnimationFrame loop can stop advancing inside a packaged
-// WKWebView. Keep Anime.js' original renderer and lifecycle intact, but drive
-// its engine with a timer while animations are active. Overriding wake means
-// play, resume, restart, reverse, and timers all restart the driver naturally.
+// Keep Anime.js' renderer and lifecycle intact. A native rAF loop is used when
+// WKWebView is healthy, with a timer fallback for the packaged-WebKit stall
+// that originally required this desktop adapter.
 engine.useDefaultMainLoop = false;
 engine.wake = wakeDesktopEngine;
 
