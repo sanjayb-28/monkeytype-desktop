@@ -1138,7 +1138,12 @@ export async function finish(difficultyFailed = false): Promise<void> {
       );
       qs("#result .stats .tags .editTagsButton")?.removeClass("invisible");
       if (desktopResult.isPb) {
-        if (desktopShouldShowConfetti) Result.showConfetti();
+        // WKWebView can report a transient scheduling drift during an
+        // otherwise valid test. Result validation and PB eligibility have
+        // already passed here, so keep the original PB effect.
+        if (desktopShouldShowConfetti) {
+          Result.showConfetti({ ignoreSlowTimer: true });
+        }
         Result.showCrown("normal");
       }
     } catch (error) {

@@ -8,6 +8,10 @@ const frontendRoot = process.cwd().endsWith("/frontend")
   : resolve(process.cwd(), "frontend");
 const webHtmlPath = resolve(frontendRoot, "src/index.html");
 const desktopHtmlPath = resolve(frontendRoot, "src/desktop.html");
+const navComponentPath = resolve(
+  frontendRoot,
+  "src/ts/components/layout/header/Nav.tsx",
+);
 
 const intentionallyOnlineElementIds = new Set([
   "ad-footer",
@@ -67,5 +71,12 @@ describe("desktop HTML parity", () => {
     );
 
     expect(missingMounts).toEqual([]);
+  });
+
+  it("uses the same profile and XP overlay container in both nav variants", async () => {
+    const navComponent = await readFile(navComponentPath, "utf8");
+
+    expect(navComponent.match(/<AccountXpContainer>/g)).toHaveLength(2);
+    expect(navComponent.match(/<AccountXpBar \/>/g)).toHaveLength(1);
   });
 });

@@ -4,6 +4,7 @@ import {
   createSignal,
   JSXElement,
   onCleanup,
+  ParentProps,
   Show,
 } from "solid-js";
 import { envConfig } from "virtual:env-config";
@@ -200,11 +201,7 @@ function WebNav(): JSXElement {
           }
         >
           {(snap) => (
-            <Anime
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1, duration: 125 }}
-              exit={{ opacity: 0, duration: 125 }}
-            >
+            <AccountXpContainer>
               <div
                 ref={accountMenuRef}
                 class={cn(
@@ -256,10 +253,7 @@ function WebNav(): JSXElement {
                   showFriendsNotificationBubble={showFriendsNotificationBubble()}
                 />
               </div>
-              <div class="relative">
-                <AccountXpBar />
-              </div>
-            </Anime>
+            </AccountXpContainer>
           )}
         </Show>
       </AnimePresence>
@@ -320,35 +314,49 @@ function DesktopNav(): JSXElement {
         balloon={{ text: "settings", position: "down" }}
       />
       <div class="grow" data-tauri-drag-region></div>
-      <Show when={getSnapshot()}>
-        {(snapshot) => (
-          <>
-            <Button
-              variant="text"
-              class={cn(
-                "h-full hover:**:data-[ui-element='userLevel']:bg-(--themable-button-hover-text)",
-                { "opacity-(--nav-focus-opacity)": getFocus() },
-              )}
-              href="/account"
-              router-link
-              dataset={{ "data-nav-item": "account" }}
-              balloon={{ text: "local profile", position: "down" }}
-            >
-              <User
-                user={snapshot()}
-                showAvatar
-                iconsOnly
-                hideNameOnSmallScreens
-                level={getAnimatedLevel()}
-                fontClass="text-em-xs"
-              />
-            </Button>
-            <div class="relative">
-              <AccountXpBar />
-            </div>
-          </>
-        )}
-      </Show>
+      <AnimePresence exitBeforeEnter>
+        <Show when={getSnapshot()}>
+          {(snapshot) => (
+            <AccountXpContainer>
+              <Button
+                variant="text"
+                class={cn(
+                  "h-full hover:**:data-[ui-element='userLevel']:bg-(--themable-button-hover-text)",
+                  { "opacity-(--nav-focus-opacity)": getFocus() },
+                )}
+                href="/account"
+                router-link
+                dataset={{ "data-nav-item": "account" }}
+                balloon={{ text: "local profile", position: "down" }}
+              >
+                <User
+                  user={snapshot()}
+                  showAvatar
+                  iconsOnly
+                  hideNameOnSmallScreens
+                  level={getAnimatedLevel()}
+                  fontClass="text-em-xs"
+                />
+              </Button>
+            </AccountXpContainer>
+          )}
+        </Show>
+      </AnimePresence>
     </nav>
+  );
+}
+
+function AccountXpContainer(props: ParentProps): JSXElement {
+  return (
+    <Anime
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1, duration: 125 }}
+      exit={{ opacity: 0, duration: 125 }}
+    >
+      {props.children}
+      <div class="relative">
+        <AccountXpBar />
+      </div>
+    </Anime>
   );
 }
